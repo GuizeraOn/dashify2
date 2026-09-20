@@ -1,0 +1,21 @@
+{
+  "project": "ads-performance-hub",
+  "version": "1.0.0",
+  "language": "pt-BR",
+  "workflow": {
+    "autoCommit": true,
+    "requirePlanApproval": true,
+    "parallelExecution": true
+  },
+  "phases": {
+    "active": "1",
+    "total": 4
+  },
+  "stack": {
+    "framework": "nextjs",
+    "styling": "tailwind",
+    "charts": "recharts",
+    "dataFetching": "tanstack-query",
+    "language": "typescript"
+  }
+}

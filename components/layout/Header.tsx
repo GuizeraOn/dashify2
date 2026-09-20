@@ -1,0 +1,156 @@
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { Info } from 'lucide-react';
+import { useState } from 'react';
+import { Tooltip } from '@/components/ui/Tooltip';
+import { Select } from '../ui/Select';
+import { useSummary } from '@/hooks/useSummary';
+
+const periods = [
+  { label: 'Hoje', value: 'today' },
+  { label: 'Ontem', value: 'yesterday' },
+  { label: 'Últimos 7 dias', value: 'last_7_days' },
+  { label: 'Últimos 14 dias', value: 'last_14_days' },
+  { label: 'Últimos 30 dias', value: 'last_30_days' },
+  { label: 'Este mês', value: 'this_month' },
+  { label: 'Mês passado', value: 'last_month' },
+  { label: 'Máximo', value: 'maximum' },
+  { label: 'Personalizado', value: 'custom' },
+];
+
+export default function Header() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
+
+  const currentPeriod = searchParams.get('period') || 'today';
+  const currentProduct = searchParams.get('product') || 'qualquer';
+
+  // React Query vai reaproveitar o cache gerado pela page.tsx
+  const { data } = useSummary({ period: currentPeriod });
+
+  const handlePeriodChange = (val: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('period', val);
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const handleProductChange = (val: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('product', val);
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const productOptions = [
+    { label: 'Qualquer', value: 'qualquer' },
+    ...(data?.available_products?.map(p => ({ label: p, value: p })) || [])
+  ];
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetch('/api/meta/sync', { method: 'POST' });
+      await queryClient.invalidateQueries();
+      setLastSynced(new Date());
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  return (
+    <div className="bg-[#1E1E1E] rounded-xl p-5 md:p-4 shadow-sm mb-6">
+      
+      {/* Top Section: Title & Refresh */}
+      <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-semibold text-white">Resumo</h1>
+          <span className="text-gray-400 text-sm hidden md:inline">
+            {lastSynced
+              ? `Atualizado às ${lastSynced.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+              : 'Sincronizando...'}
+          </span>
+        </div>
+        <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto">
+          <span className="text-gray-400 text-sm md:hidden">Atualizado agora</span>
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="bg-[#0f62fe] hover:bg-[#0353e9] disabled:opacity-50 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors"
+          >
+            {isRefreshing ? 'Atualizando...' : 'Atualizar'}
+          </button>
+        </div>
+      </div>
+
+      {/* Divider */}
+      <hr className="border-[#333] mb-4" />
+
+      {/* Filters Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        
+        {/* Período */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-gray-300 text-xs font-medium flex items-center gap-1.5">
+            Período
+            <Tooltip content={<p className="text-center">Filtra os dados pelo período selecionado.</p>}>
+              <button className="text-gray-500 hover:text-gray-300 outline-none">
+                <Info size={14} />
+              </button>
+            </Tooltip>
+          </label>
+          <Select 
+            value={currentPeriod}
+            onChange={handlePeriodChange}
+            options={periods}
+          />
+        </div>
+
+        {/* Conta de Anúncio */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-gray-300 text-xs font-medium">Conta</label>
+          <Select 
+            value="todas"
+            options={[{ label: 'Todas', value: 'todas' }]}
+            disabled
+          />
+        </div>
+
+        {/* Plataformas */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-gray-300 text-xs font-medium">Plataformas</label>
+          <Select 
+            value="qualquer"
+            options={[{ label: 'Qualquer', value: 'qualquer' }]}
+            disabled
+          />
+        </div>
+
+        {/* Produtos */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-gray-300 text-xs font-medium">Produtos</label>
+          <Select 
+            value={currentProduct}
+            onChange={handleProductChange}
+            options={productOptions}
+          />
+        </div>
+
+        {/* Fonte de tráfego */}
+        <div className="flex flex-col gap-1.5 col-span-2 lg:col-span-1">
+          <label className="text-gray-300 text-xs font-medium">Fonte</label>
+          <Select 
+            value="qualquer"
+            options={[{ label: 'Qualquer', value: 'qualquer' }]}
+            disabled
+          />
+        </div>
+
+      </div>
+    </div>
+  );
+}
