@@ -167,7 +167,6 @@ export default function DashboardPage() {
               content={
                 <div className="max-w-[260px] text-left">
                   <p className="mb-1">O número grande é a fatia dos cliques que chegou até a etapa. Abaixo do nome, em cinza, está quanto ela reteve da etapa anterior — é ali que se vê o gargalo.</p>
-                  <p className="mb-1">A espessura da fita acompanha a fatia dos cliques numa escala comprimida, para as últimas etapas não virarem um fio só.</p>
                   <p className="mb-1"><b>Cliques</b>, <b>Vis. Página</b> e <b>ICs</b> vêm do Meta Ads.</p>
                   <p>
                     <b>Vendas Apr.</b> são as com pagamento confirmado

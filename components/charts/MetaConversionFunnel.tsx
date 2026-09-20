@@ -18,7 +18,7 @@ const VIEW_HEIGHT = 100;
 /** Fracao da altura que a fita pode ocupar no seu ponto mais grosso. */
 const MAX_THICKNESS = 0.92;
 /** Espessura minima, para uma etapa perto de zero ainda aparecer. */
-const MIN_THICKNESS = 4;
+const MIN_THICKNESS = 2.5;
 
 /**
  * Monta a fita: uma curva suave passando pela espessura de cada etapa.
@@ -87,10 +87,10 @@ export default function MetaConversionFunnel({ data }: Props) {
   });
 
   const thicknesses = shares.map((share) => {
-    // Escala pela raiz quadrada: entre 100% e 1% a diferenca linear achataria
-    // as duas ultimas etapas em fios identicos. A raiz preserva a ordem e
-    // mantem a queda legivel — os numeros exatos estao escritos no grafico.
-    const bounded = Math.sqrt(Math.min(Math.max(share, 0), 1));
+    // Proporcao direta: a fita fica tao fina quanto a fatia que sobrou. Uma
+    // etapa de 1% tem que parecer 1% — comprimir a escala para deixar o fim do
+    // funil mais gordo mentiria sobre o tamanho da queda.
+    const bounded = Math.min(Math.max(share, 0), 1);
     return Math.max(MIN_THICKNESS, bounded * VIEW_HEIGHT * MAX_THICKNESS);
   });
 
