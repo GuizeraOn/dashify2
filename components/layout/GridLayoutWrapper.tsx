@@ -1,10 +1,7 @@
-// @ts-nocheck
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-// @ts-ignore
 import { Responsive } from 'react-grid-layout';
-// @ts-ignore
 import { WidthProvider } from 'react-grid-layout/legacy';
 import { useLayoutStore } from '@/store/layoutStore';
 
@@ -169,11 +166,10 @@ export default function GridLayoutWrapper({ children }: GridLayoutWrapperProps) 
           cols={{ lg: 8, md: 4, sm: 2, xs: 1, xxs: 1 }}
           rowHeight={110}
           onLayoutChange={handleLayoutChange}
-          isDraggable={canEditLayout}
-          isResizable={canEditLayout}
+          dragConfig={{ enabled: canEditLayout }}
+          resizeConfig={{ enabled: canEditLayout }}
           margin={[16, 16]}
           containerPadding={[0, 0]}
-          useCSSTransforms={mounted}
           measureBeforeMount
         >
           {children}
