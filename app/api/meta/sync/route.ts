@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Constants mimicking the Apps Script
 const API_VERSION = 'v25.0';
@@ -119,7 +119,7 @@ export async function POST() {
 
     if (rowsToUpsert.length > 0) {
       // Upsert into Supabase
-      const { error } = await supabaseAdmin
+      const { error } = await getSupabaseAdmin()
         .from('meta_ads_insights')
         .upsert(rowsToUpsert, { onConflict: 'key' });
 

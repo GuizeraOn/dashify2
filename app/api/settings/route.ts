@@ -1,12 +1,12 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const key = searchParams.get('key');
 
-    let query = supabaseAdmin.from('app_settings').select('*');
+    let query = getSupabaseAdmin().from('app_settings').select('*');
     if (key) {
       query = query.eq('key', key);
     }
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing key or value' }, { status: 400 });
     }
 
-    const { error } = await supabaseAdmin
+    const { error } = await getSupabaseAdmin()
       .from('app_settings')
       .upsert({ 
         key, 

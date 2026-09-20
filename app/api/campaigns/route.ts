@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 export async function GET(request: Request) {
   try {
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
       dateEnd = undefined;
     }
 
-    let query = supabaseAdmin.from('meta_ads_insights').select('*');
+    let query = getSupabaseAdmin().from('meta_ads_insights').select('*');
     if (dateStart) query = query.gte('date', dateStart);
     if (dateEnd) query = query.lte('date', dateEnd);
 

@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { getSheetsClient, getSpreadsheetId } from '@/lib/sheets';
 import { parseVendas } from '@/lib/parsers/vendas';
 import { calculateKPIs, filterVendasByDate } from '@/lib/kpis';
-import { supabaseAdmin } from '@/lib/supabase';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
@@ -56,14 +56,14 @@ export async function GET(request: NextRequest) {
     const sheets = await getSheetsClient();
     const spreadsheetId = getSpreadsheetId();
 
-    let metaQuery = supabaseAdmin.from('meta_ads_insights').select('*');
+    let metaQuery = getSupabaseAdmin().from('meta_ads_insights').select('*');
     if (dateStart) metaQuery = metaQuery.gte('date', dateStart);
     if (dateEnd) metaQuery = metaQuery.lte('date', dateEnd);
 
     const [metaResult, vendasResponse, settingsResult] = await Promise.all([
       metaQuery,
       sheets.spreadsheets.values.get({ spreadsheetId, range: 'db_vendas!A:S' }),
-      supabaseAdmin.from('app_settings').select('value').eq('key', 'front_products').single()
+      getSupabaseAdmin().from('app_settings').select('value').eq('key', 'front_products').single()
     ]);
 
     if (metaResult.error) {
