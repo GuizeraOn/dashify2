@@ -16,7 +16,20 @@ export interface SummaryData {
     approval_rate: number;
     breakdown: { status: string; count: number }[];
   };
+  funnel_stats?: FunnelStats;
   available_products?: string[];
+}
+
+export interface FunnelStep {
+  key: string;
+  label: string;
+  count: number;
+}
+
+export interface FunnelStats {
+  /** false quando a conta nao reporta cliques no link e caimos no clique total. */
+  clicks_are_link_clicks: boolean;
+  steps: FunnelStep[];
 }
 
 interface UseSummaryOptions {

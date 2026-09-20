@@ -28,8 +28,40 @@ const DEFAULT_LAYOUTS = {
     { i: 'chart-revenue_spend',  x: 0, y: 3, w: 6, h: 3, minW: 2 },
     { i: 'chart-payment',        x: 6, y: 3, w: 2, h: 3, minW: 2 },
     { i: 'chart-card_approval',  x: 0, y: 6, w: 4, h: 3, minW: 2 },
+    { i: 'chart-funnel',         x: 4, y: 6, w: 4, h: 3, minW: 3 },
   ],
 };
+
+/**
+ * Completa um layout salvo com os cards que ele ainda nao conhece.
+ *
+ * Um layout guardado antes de um card novo existir nao tem entrada para ele, e
+ * o react-grid-layout posiciona o desconhecido no tamanho minimo (1x1). Aqui os
+ * ausentes entram com as medidas do DEFAULT_LAYOUTS, empilhados abaixo do que
+ * ja existe para nao colidir com o que o usuario arrumou.
+ */
+function withMissingDefaults(saved: any) {
+  if (!saved || typeof saved !== 'object') return DEFAULT_LAYOUTS;
+
+  const merged: any = { ...saved };
+
+  for (const breakpoint of Object.keys(merged)) {
+    const items = merged[breakpoint];
+    if (!Array.isArray(items)) continue;
+
+    const present = new Set(items.map((item: any) => item.i));
+    const missing = DEFAULT_LAYOUTS.lg.filter((item) => !present.has(item.i));
+    if (!missing.length) continue;
+
+    const nextRow = items.reduce((max: number, item: any) => Math.max(max, item.y + item.h), 0);
+    merged[breakpoint] = [
+      ...items,
+      ...missing.map((item, index) => ({ ...item, x: 0, y: nextRow + index })),
+    ];
+  }
+
+  return merged;
+}
 
 // Le o ultimo layout conhecido do localStorage para que o primeiro paint ja
 // aconteca nas posicoes certas, sem esperar o fetch do Supabase.
@@ -37,7 +69,7 @@ function readCachedLayouts() {
   if (typeof window === 'undefined') return DEFAULT_LAYOUTS;
   try {
     const raw = window.localStorage.getItem(LAYOUT_CACHE_KEY);
-    return raw ? JSON.parse(raw) : DEFAULT_LAYOUTS;
+    return raw ? withMissingDefaults(JSON.parse(raw)) : DEFAULT_LAYOUTS;
   } catch {
     return DEFAULT_LAYOUTS;
   }
@@ -75,7 +107,7 @@ export default function GridLayoutWrapper({ children }: GridLayoutWrapperProps) 
         const res = await fetch('/api/settings?key=dashboard_layout');
         const json = await res.json();
         if (json.data && json.data.length > 0 && json.data[0].value) {
-          setLayouts(json.data[0].value);
+          setLayouts(withMissingDefaults(json.data[0].value));
           try {
             window.localStorage.setItem(LAYOUT_CACHE_KEY, JSON.stringify(json.data[0].value));
           } catch {}

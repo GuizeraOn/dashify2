@@ -145,12 +145,40 @@ export async function GET(request: NextRequest) {
       breakdown: Object.entries(cardStatusMap).map(([status, count]) => ({ status, count }))
     };
 
+    // Funil de conversao: do clique no anuncio ate a venda aprovada.
+    // As tres primeiras etapas vem do Meta; as duas ultimas, da planilha.
+    const sum = (field: string) => metaData.reduce((total, row) => total + (Number(row[field]) || 0), 0);
+
+    // Preferimos o clique no link ao clique total (que inclui curtida, comentario
+    // e expandir imagem). Algumas contas nao reportam inline_link_clicks — nesse
+    // caso o total de cliques e o unico numero disponivel.
+    const linkClicks = sum('link_clicks');
+    const clicks = linkClicks > 0 ? linkClicks : sum('clicks');
+
+    const approvedCount = vendasData.filter(
+      row => row.status.toLowerCase().trim() === 'aprovado'
+    ).length;
+
+    const funnel_stats = {
+      // Usou o clique no link ou caiu para o clique total? A interface avisa.
+      clicks_are_link_clicks: linkClicks > 0,
+      steps: [
+        { key: 'clicks', label: 'Cliques', count: clicks },
+        { key: 'landing_page_views', label: 'Vis. Página', count: sum('landing_page_views') },
+        { key: 'initiate_checkout', label: 'ICs', count: sum('initiate_checkout') },
+        // Todo pedido gerado no sistema, inclusive boleto e Pix ainda nao pagos.
+        { key: 'orders', label: 'Vendas Inic.', count: vendasData.length },
+        { key: 'approved', label: 'Vendas Apr.', count: approvedCount },
+      ],
+    };
+
     return NextResponse.json({ 
       kpis, 
       metadata: { dateStart, dateEnd },
       daily_stats,
       payment_stats,
       card_approval_stats,
+      funnel_stats,
       available_products
     });
   } catch (error: any) {

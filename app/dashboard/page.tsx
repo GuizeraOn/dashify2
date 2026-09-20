@@ -10,6 +10,9 @@ import { KPISkeleton, ChartSkeleton } from '@/components/LoadingSkeleton';
 import RevenueVsSpendChart from '@/components/charts/RevenueVsSpendChart';
 import PaymentMethodChart from '@/components/charts/PaymentMethodChart';
 import CardApprovalChart from '@/components/charts/CardApprovalChart';
+import MetaConversionFunnel from '@/components/charts/MetaConversionFunnel';
+import { Tooltip } from '@/components/ui/Tooltip';
+import { Info } from 'lucide-react';
 
 export default function DashboardPage() {
   const searchParams = useSearchParams();
@@ -154,6 +157,32 @@ export default function DashboardPage() {
           </div>
           <div className="flex-1 w-full relative min-h-0">
             {isLoading ? <ChartSkeleton /> : <PaymentMethodChart data={data?.payment_stats} />}
+          </div>
+        </div>
+
+        <div key="chart-funnel" className="bg-[#1E1E1E] rounded-xl p-5 flex flex-col shadow-sm h-full w-full">
+          <div className="flex items-start justify-between mb-4 flex-shrink-0">
+            <h3 className="font-semibold text-gray-200">Funil de Conversão (Meta Ads)</h3>
+            <Tooltip
+              content={
+                <div className="max-w-[260px] text-left">
+                  <p className="mb-1">Cada etapa mostra quanto reteve da etapa anterior.</p>
+                  <p className="mb-1"><b>Cliques</b> e <b>Vis. Página</b> e <b>ICs</b> vêm do Meta Ads.</p>
+                  <p className="mb-1"><b>Vendas Inic.</b> são todos os pedidos gerados, inclusive boletos e Pix ainda não pagos.</p>
+                  <p><b>Vendas Apr.</b> são as com pagamento confirmado.</p>
+                  {data?.funnel_stats && !data.funnel_stats.clicks_are_link_clicks && (
+                    <p className="mt-2 text-amber-400">A conta não reporta cliques no link; usando o total de cliques.</p>
+                  )}
+                </div>
+              }
+            >
+              <button className="text-gray-500 hover:text-gray-300 outline-none">
+                <Info size={16} />
+              </button>
+            </Tooltip>
+          </div>
+          <div className="flex-1 w-full relative min-h-0">
+            {isLoading ? <ChartSkeleton /> : <MetaConversionFunnel data={data?.funnel_stats} />}
           </div>
         </div>
 
