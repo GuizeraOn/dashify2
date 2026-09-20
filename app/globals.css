@@ -60,3 +60,25 @@ body {
     color: #ffffff;
   }
 }
+
+/* Piscada dos numeros ao atualizar --------------------------------------- */
+/* Disparada pelo KPICard quando o valor muda de fato — nunca na primeira
+   renderizacao. A duracao precisa bater com FLASH_DURATION_MS de lá. */
+@keyframes kpi-flash {
+  from {
+    background-color: rgba(15, 98, 254, 0.35);
+  }
+  to {
+    background-color: rgba(15, 98, 254, 0);
+  }
+}
+
+.kpi-flash {
+  animation: kpi-flash 900ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kpi-flash {
+    animation: none;
+  }
+}
