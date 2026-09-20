@@ -58,6 +58,11 @@ export default function GridLayoutWrapper({ children }: GridLayoutWrapperProps) 
   const [ready, setReady] = useState(false);
   const [layoutLoaded, setLayoutLoaded] = useState(false);
 
+  // Arrastar/redimensionar so no desktop: 1024px e o breakpoint `lg`, o mesmo
+  // do layout que fica salvo. Em telas menores os cards ficam fixos.
+  const [isDesktop, setIsDesktop] = useState(false);
+  const canEditLayout = isEditingLayout && isDesktop;
+
   // Bloqueia saves ate o carregamento inicial do Supabase terminar.
   // O react-grid-layout dispara onLayoutChange ao montar — sem essa trava,
   // o layout padrao sobrescreveria o layout salvo antes do fetch completar.
@@ -88,6 +93,15 @@ export default function GridLayoutWrapper({ children }: GridLayoutWrapperProps) 
     }
 
     loadLayout();
+  }, []);
+
+  useEffect(() => {
+    const query = window.matchMedia('(min-width: 1024px)');
+    const sync = () => setIsDesktop(query.matches);
+
+    sync();
+    query.addEventListener('change', sync);
+    return () => query.removeEventListener('change', sync);
   }, []);
 
   // Revela o grid apenas depois que o layout final foi aplicado e o
@@ -127,9 +141,10 @@ export default function GridLayoutWrapper({ children }: GridLayoutWrapperProps) 
 
   const handleLayoutChange = (currentLayout: any, allLayouts: any) => {
     setLayouts(allLayouts);
-    // So salva quando o usuario esta editando ativamente
-    // (evita que normalizacoes automaticas do RGL sobrescrevam o layout salvo)
-    if (isEditingLayout) {
+    // So salva quando o usuario esta editando ativamente no desktop
+    // (evita que normalizacoes automaticas do RGL — inclusive as dos
+    // breakpoints menores — sobrescrevam o layout salvo)
+    if (canEditLayout) {
       saveToSupabase(allLayouts);
       try {
         window.localStorage.setItem(LAYOUT_CACHE_KEY, JSON.stringify(allLayouts));
@@ -141,7 +156,7 @@ export default function GridLayoutWrapper({ children }: GridLayoutWrapperProps) 
 
   return (
     <div className="relative">
-      {isEditingLayout && (
+      {canEditLayout && (
         <div className="absolute -top-7 right-0 text-xs text-gray-500 z-10">
           {isSaving ? 'Salvando...' : 'Layout salvo'}
         </div>
@@ -154,8 +169,8 @@ export default function GridLayoutWrapper({ children }: GridLayoutWrapperProps) 
           cols={{ lg: 8, md: 4, sm: 2, xs: 1, xxs: 1 }}
           rowHeight={110}
           onLayoutChange={handleLayoutChange}
-          isDraggable={isEditingLayout}
-          isResizable={isEditingLayout}
+          isDraggable={canEditLayout}
+          isResizable={canEditLayout}
           margin={[16, 16]}
           containerPadding={[0, 0]}
           useCSSTransforms={mounted}

@@ -32,9 +32,11 @@ export default function TopNav() {
 
         {/* Icons */}
         <div className="flex items-center gap-3 md:gap-4 text-gray-300">
+          {/* O grid so aceita arrastar/redimensionar a partir de 1024px,
+              entao o botao acompanha esse mesmo breakpoint. */}
           <button 
             onClick={toggleEditingLayout}
-            className={`transition-colors hidden md:block ${isEditingLayout ? 'text-[#0f62fe]' : 'hover:text-white'}`}
+            className={`transition-colors hidden lg:block ${isEditingLayout ? 'text-[#0f62fe]' : 'hover:text-white'}`}
             title="Editar Layout do Dashboard"
           >
             {isEditingLayout ? <Check size={18} /> : <Edit size={18} />}
