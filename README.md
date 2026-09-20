@@ -18,6 +18,36 @@ TanStack Query · Recharts · react-grid-layout · Supabase.
 - **Páginas** — Vendas, Campanhas, Relatórios e Configurações.
 - **Sincronização automática** com o Meta Ads ao abrir o dashboard.
 
+## PWA
+
+O app é instalável — no Chrome/Edge aparece o botão **Instalar** na barra
+superior, e no iPhone funciona via *Compartilhar → Adicionar à Tela de Início*.
+
+- **Manifest** gerado em [`app/manifest.ts`](./app/manifest.ts) (`start_url`
+  vai direto para `/dashboard`, `display: standalone`, atalhos para Vendas,
+  Campanhas e Relatórios).
+- **Service worker** em [`public/sw.js`](./public/sw.js): rede primeiro na
+  navegação, cache só para assets estáticos. As rotas `/api/*` **nunca** são
+  guardadas em cache — número velho num painel financeiro é pior que painel
+  vazio. Só é registrado em produção, para não atrapalhar o hot reload.
+- **Tela de abertura**: no Android é gerada pelo manifest; no iOS vem das
+  imagens em `public/splash/`, uma por resolução. Além disso há uma tela de
+  abertura dentro do app (`#app-splash`), visível apenas com o app instalado,
+  que cobre a janela enquanto o JavaScript carrega.
+
+### Regerando os ícones e as telas de abertura
+
+Ícones e splashes são gerados a partir do mesmo desenho do favicon. A lista de
+aparelhos do iOS fica em [`lib/pwa-splash.ts`](./lib/pwa-splash.ts) e serve de
+fonte única tanto para os arquivos quanto para as media queries no `<head>`.
+
+```bash
+node scripts/generate-pwa-assets.mjs
+```
+
+Os PNGs gerados são versionados, então isso não roda no build. Rode de novo se
+mudar as cores da marca ou acrescentar um aparelho à lista.
+
 ## Requisitos
 
 - Node.js 20.9+

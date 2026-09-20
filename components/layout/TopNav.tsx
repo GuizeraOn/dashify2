@@ -2,6 +2,7 @@ import { ChevronDown, Moon, Edit, Check } from 'lucide-react';
 import { Target } from 'lucide-react';
 import { Poppins } from 'next/font/google';
 import { useLayoutStore } from '@/store/layoutStore';
+import InstallButton from '@/components/pwa/InstallButton';
 
 const poppins = Poppins({ subsets: ['latin'], weight: ['400', '500', '600'] });
 
@@ -21,6 +22,9 @@ export default function TopNav() {
 
       {/* Right Actions */}
       <div className="flex items-center gap-3 md:gap-6">
+
+        {/* So renderiza quando o navegador oferece a instalacao */}
+        <InstallButton />
         
         {/* Workspace Selector */}
         <div className="flex items-center gap-1.5 md:gap-2 text-gray-300">

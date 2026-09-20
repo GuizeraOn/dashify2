@@ -29,3 +29,34 @@ body {
   transition: none !important;
   animation: none !important;
 }
+
+/* Tela de abertura do app instalado ------------------------------------- */
+/* Fica escondida por padrao: em uma aba comum o usuario nao deve ver splash
+   nenhuma. So aparece na janela do app instalado, e some quando o React
+   hidrata (SplashScreenGate marca data-ready). */
+#app-splash {
+  display: none;
+}
+
+@media (display-mode: standalone), (display-mode: minimal-ui) {
+  #app-splash:not([data-ready]) {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    /* Mesmo fundo do background_color do manifest e das imagens de abertura
+       do iOS: a troca entre a splash nativa e esta nao aparece. */
+    background: #121212;
+  }
+
+  #app-splash:not([data-ready]) span {
+    font-size: 1.5rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: #ffffff;
+  }
+}
