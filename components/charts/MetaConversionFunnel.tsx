@@ -17,8 +17,8 @@ const VIEW_HEIGHT = 100;
 
 /** Fracao da altura que a fita pode ocupar no seu ponto mais grosso. */
 const MAX_THICKNESS = 0.92;
-/** Espessura minima, para uma etapa de 1% ainda aparecer como um fio. */
-const MIN_THICKNESS = 2;
+/** Espessura minima, para uma etapa perto de zero ainda aparecer. */
+const MIN_THICKNESS = 4;
 
 /**
  * Monta a fita: uma curva suave passando pela espessura de cada etapa.
@@ -72,19 +72,25 @@ export default function MetaConversionFunnel({ data }: Props) {
     );
   }
 
-  // Cada etapa mostra quanto reteve da etapa anterior; a primeira e a base.
-  const rates = steps.map((step, index) => {
-    if (index === 0) return 1;
+  const start = steps[0].count;
+
+  // Numero principal: quanto do trafego inicial sobrou nesta etapa. E o que a
+  // fita representa — o volume que ainda esta fluindo.
+  const shares = steps.map((step) => step.count / start);
+
+  // Numero secundario: quanto a etapa reteve da anterior. E aqui que se enxerga
+  // onde esta o gargalo, que a fatia acumulada sozinha nao mostra.
+  const stepRates = steps.map((step, index) => {
+    if (index === 0) return null;
     const previous = steps[index - 1].count;
     return previous > 0 ? step.count / previous : null;
   });
 
-  const thicknesses = rates.map((rate) => {
-    if (rate === null) return MIN_THICKNESS;
-    // Vendas aprovadas inclui pedidos de qualquer origem, nao so do Meta, entao
-    // a taxa pode passar de 100% da etapa anterior. O numero exibido continua
-    // real; so o desenho para de crescer.
-    const bounded = Math.min(rate, 1);
+  const thicknesses = shares.map((share) => {
+    // Escala pela raiz quadrada: entre 100% e 1% a diferenca linear achataria
+    // as duas ultimas etapas em fios identicos. A raiz preserva a ordem e
+    // mantem a queda legivel — os numeros exatos estao escritos no grafico.
+    const bounded = Math.sqrt(Math.min(Math.max(share, 0), 1));
     return Math.max(MIN_THICKNESS, bounded * VIEW_HEIGHT * MAX_THICKNESS);
   });
 
@@ -114,6 +120,9 @@ export default function MetaConversionFunnel({ data }: Props) {
             </div>
             <div className="mt-0.5 text-[11px] tabular-nums text-gray-500">
               {formatCount(step.count)}
+            </div>
+            <div className="text-[10px] tabular-nums text-gray-600">
+              {index === 0 ? ' ' : `${formatRate(stepRates[index])} da anterior`}
             </div>
           </div>
         ))}
@@ -150,7 +159,7 @@ export default function MetaConversionFunnel({ data }: Props) {
               )}
             >
               <span className="text-sm font-bold tabular-nums text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)] md:text-base">
-                {formatRate(rates[index])}
+                {formatRate(shares[index])}
               </span>
             </div>
           ))}
