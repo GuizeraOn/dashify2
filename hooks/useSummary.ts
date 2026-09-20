@@ -29,6 +29,8 @@ export interface FunnelStep {
 export interface FunnelStats {
   /** false quando a conta nao reporta cliques no link e caimos no clique total. */
   clicks_are_link_clicks: boolean;
+  /** true quando a ultima etapa conta apenas os produtos de front. */
+  approved_is_front_only: boolean;
   steps: FunnelStep[];
 }
 

@@ -155,19 +155,25 @@ export async function GET(request: NextRequest) {
     const linkClicks = sum('link_clicks');
     const clicks = linkClicks > 0 ? linkClicks : sum('clicks');
 
-    const approvedCount = vendasData.filter(
+    // So produtos de front entram na ultima etapa: order bump e upsell acontecem
+    // depois do checkout e inflariam a conversao do anuncio. Mesma regra do CPA
+    // — sem produtos de front configurados, conta todas as aprovadas.
+    const approvedVendas = vendasData.filter(
       row => row.status.toLowerCase().trim() === 'aprovado'
-    ).length;
+    );
+    const approvedCount = frontProducts.length > 0
+      ? approvedVendas.filter(row => frontProducts.includes(row.produto)).length
+      : approvedVendas.length;
 
     const funnel_stats = {
       // Usou o clique no link ou caiu para o clique total? A interface avisa.
       clicks_are_link_clicks: linkClicks > 0,
+      // Verdadeiro quando a ultima etapa esta restrita aos produtos de front.
+      approved_is_front_only: frontProducts.length > 0,
       steps: [
         { key: 'clicks', label: 'Cliques', count: clicks },
         { key: 'landing_page_views', label: 'Vis. Página', count: sum('landing_page_views') },
         { key: 'initiate_checkout', label: 'ICs', count: sum('initiate_checkout') },
-        // Todo pedido gerado no sistema, inclusive boleto e Pix ainda nao pagos.
-        { key: 'orders', label: 'Vendas Inic.', count: vendasData.length },
         { key: 'approved', label: 'Vendas Apr.', count: approvedCount },
       ],
     };

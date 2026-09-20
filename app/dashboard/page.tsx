@@ -167,9 +167,13 @@ export default function DashboardPage() {
               content={
                 <div className="max-w-[260px] text-left">
                   <p className="mb-1">Cada etapa mostra quanto reteve da etapa anterior.</p>
-                  <p className="mb-1"><b>Cliques</b> e <b>Vis. Página</b> e <b>ICs</b> vêm do Meta Ads.</p>
-                  <p className="mb-1"><b>Vendas Inic.</b> são todos os pedidos gerados, inclusive boletos e Pix ainda não pagos.</p>
-                  <p><b>Vendas Apr.</b> são as com pagamento confirmado.</p>
+                  <p className="mb-1"><b>Cliques</b>, <b>Vis. Página</b> e <b>ICs</b> vêm do Meta Ads.</p>
+                  <p>
+                    <b>Vendas Apr.</b> são as com pagamento confirmado
+                    {data?.funnel_stats?.approved_is_front_only
+                      ? ', contando apenas os produtos de front.'
+                      : '.'}
+                  </p>
                   {data?.funnel_stats && !data.funnel_stats.clicks_are_link_clicks && (
                     <p className="mt-2 text-amber-400">A conta não reporta cliques no link; usando o total de cliques.</p>
                   )}

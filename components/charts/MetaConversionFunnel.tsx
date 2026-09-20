@@ -81,9 +81,9 @@ export default function MetaConversionFunnel({ data }: Props) {
 
   const thicknesses = rates.map((rate) => {
     if (rate === null) return MIN_THICKNESS;
-    // Vendas iniciadas conta pedidos de todas as origens, entao pode passar de
-    // 100% da etapa anterior. O numero exibido continua real; so o desenho
-    // para de crescer.
+    // Vendas aprovadas inclui pedidos de qualquer origem, nao so do Meta, entao
+    // a taxa pode passar de 100% da etapa anterior. O numero exibido continua
+    // real; so o desenho para de crescer.
     const bounded = Math.min(rate, 1);
     return Math.max(MIN_THICKNESS, bounded * VIEW_HEIGHT * MAX_THICKNESS);
   });
