@@ -101,7 +101,7 @@ export default function SalesByCountry({ data = [], selected, onSelect }: Props)
       </div>
 
       {view === 'map' ? (
-        <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg bg-[#0b1733]">
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg">
           <svg
             className="h-full w-full"
             viewBox={`0 0 ${WORLD_WIDTH} ${WORLD_HEIGHT}`}
@@ -115,7 +115,7 @@ export default function SalesByCountry({ data = [], selected, onSelect }: Props)
             </defs>
 
             {/* Contexto: os continentes ficam de proposito com pouco contraste */}
-            <path d={WORLD_LAND_PATH} fill="#2b4a9e" fillOpacity="0.85" />
+            <path d={WORLD_LAND_PATH} fill="#1e3a8a" fillOpacity="0.6" />
 
             {markers.map((marker) => {
               const isActive = active === marker.country;
