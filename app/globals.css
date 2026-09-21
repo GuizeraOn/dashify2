@@ -61,28 +61,6 @@ body {
   }
 }
 
-/* Piscada dos numeros ao atualizar --------------------------------------- */
-/* Disparada pelo KPICard quando o valor muda de fato — nunca na primeira
-   renderizacao. A duracao precisa bater com FLASH_DURATION_MS de lá. */
-@keyframes kpi-flash {
-  from {
-    background-color: rgba(15, 98, 254, 0.35);
-  }
-  to {
-    background-color: rgba(15, 98, 254, 0);
-  }
-}
-
-.kpi-flash {
-  animation: kpi-flash 900ms ease-out;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .kpi-flash {
-    animation: none;
-  }
-}
-
 /* Calendario de periodo personalizado ------------------------------------ */
 /* O react-day-picker vem com tema claro; aqui so as variaveis dele sao
    redefinidas para o tema escuro do dashboard. */

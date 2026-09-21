@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSummary } from '@/hooks/useSummary';
+import { useRefreshPulse } from '@/hooks/useRefreshPulse';
 import KPICard from '@/components/KPICard';
 import GridLayoutWrapper from '@/components/layout/GridLayoutWrapper';
 import { KPISkeleton, ChartSkeleton } from '@/components/LoadingSkeleton';
@@ -54,7 +55,17 @@ export default function DashboardPage() {
     autoSync();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { data, isLoading, isError, error } = useSummary({ period, campaign, product, country, dateStart, dateEnd });
+  const { data, isLoading, isError, error, dataUpdatedAt } = useSummary({
+    period,
+    campaign,
+    product,
+    country,
+    dateStart,
+    dateEnd,
+  });
+
+  // Todos os numeros somem e voltam juntos quando chegam dados novos.
+  const isRefreshing = useRefreshPulse(dataUpdatedAt);
 
   if (isError) {
     return (
@@ -164,6 +175,7 @@ export default function DashboardPage() {
                 type={item.type}
                 tooltip={item.tooltip}
                 inverseColors={item.inverseColors}
+                isRefreshing={isRefreshing}
                 mutedReason={
                   country && item.dependsOnSpend
                     ? `O gasto do Meta não é separado por país, então este número mistura o faturamento de ${country} com o gasto de todos os países.`
