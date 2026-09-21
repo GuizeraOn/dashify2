@@ -105,6 +105,8 @@ Todas estão documentadas em [`.env.example`](./.env.example):
 | `AD_ACCOUNT_ID` | servidor | ID da conta de anúncios (com ou sem `act_`) |
 | `NEXT_PUBLIC_SUPABASE_URL` | cliente/servidor | URL do projeto Supabase |
 | `SUPABASE_SERVICE_ROLE_KEY` | **somente servidor** | Chave `service_role` do Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | cliente/servidor | Chave anon do Supabase, usada pelo login |
+| `ALLOWED_EMAILS` | servidor | Opcional. E-mails autorizados, separados por vírgula |
 | `APP_TIMEZONE` | servidor | Opcional. Fuso usado para resolver os períodos. Padrão `America/Sao_Paulo` |
 
 > Os períodos ("hoje", "ontem", "este mês") são resolvidos em `APP_TIMEZONE`,
@@ -114,6 +116,27 @@ Todas estão documentadas em [`.env.example`](./.env.example):
 > A `SUPABASE_SERVICE_ROLE_KEY` ignora Row Level Security. Ela só é lida em
 > código de servidor (`lib/supabase.ts`) e nunca deve receber o prefixo
 > `NEXT_PUBLIC_`.
+
+## Login
+
+O painel inteiro fica atrás de autenticação — rotas de página **e** as rotas
+`/api/*`, senão bastaria abrir `/api/summary` no navegador para ler tudo.
+O porteiro é o [`proxy.ts`](./proxy.ts) na raiz (no Next 16 o antigo
+`middleware.ts` foi renomeado para `proxy.ts`).
+
+Para habilitar:
+
+1. No painel do Supabase, em **Project Settings → API**, copie a chave
+   **anon/publishable** para `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+2. Em **Authentication → Providers → Email**, mantenha o provedor ligado e
+   **desligue "Enable sign ups"** — as contas são criadas por você.
+3. Em **Authentication → Users → Add user**, crie o seu usuário com e-mail e
+   senha (marque "Auto Confirm User").
+4. Opcionalmente defina `ALLOWED_EMAILS` com os e-mails que podem entrar.
+
+Não existe tela de cadastro no app, de propósito: um formulário aberto daria
+uma conta válida a qualquer visitante. Sem a chave anon configurada, o painel
+fica inacessível e a tela de login explica o que falta — ele falha fechado.
 
 ## Banco (Supabase)
 

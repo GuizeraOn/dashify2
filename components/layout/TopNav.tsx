@@ -1,13 +1,24 @@
-import { ChevronDown, Moon, Edit, Check } from 'lucide-react';
+'use client';
+
+import { ChevronDown, Moon, Edit, Check, LogOut } from 'lucide-react';
 import { Target } from 'lucide-react';
 import { Poppins } from 'next/font/google';
 import { useLayoutStore } from '@/store/layoutStore';
 import InstallButton from '@/components/pwa/InstallButton';
+import { useRouter } from 'next/navigation';
+import { createBrowserSupabase } from '@/lib/supabase-auth';
 
 const poppins = Poppins({ subsets: ['latin'], weight: ['400', '500', '600'] });
 
 export default function TopNav() {
   const { isEditingLayout, toggleEditingLayout } = useLayoutStore();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await createBrowserSupabase().auth.signOut();
+    router.replace('/login');
+    router.refresh();
+  };
 
   return (
     <div className="h-16 bg-[#121212] border-b border-[#333] flex items-center justify-between px-4 md:px-6 z-40 flex-shrink-0">
@@ -47,6 +58,13 @@ export default function TopNav() {
           </button>
           <button className="hover:text-white transition-colors">
             <Moon size={18} />
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="transition-colors hover:text-white"
+            title="Sair"
+          >
+            <LogOut size={18} />
           </button>
         </div>
       </div>
