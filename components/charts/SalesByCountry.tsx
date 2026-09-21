@@ -162,8 +162,8 @@ export default function SalesByCountry({ data = [], selected, onSelect }: Props)
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-          <div className="flex flex-col gap-2.5">
-            {data.map((item, index) => {
+          <div className="flex flex-col">
+            {data.map((item) => {
               const isActive = active === item.country;
               return (
                 <button
@@ -172,26 +172,23 @@ export default function SalesByCountry({ data = [], selected, onSelect }: Props)
                   onMouseLeave={() => setHovered(null)}
                   onClick={() => handleSelect(item.country)}
                   className={cn(
-                    'group flex w-full items-center gap-3 rounded-md px-1 py-1 text-left transition-colors',
+                    'flex w-full items-center gap-3 rounded-md px-2 py-2 text-left transition-colors hover:bg-white/5',
                     isActive && 'bg-white/5'
                   )}
                 >
-                  <span className="w-5 flex-shrink-0 text-xs tabular-nums text-gray-600">
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <span className="w-24 flex-shrink-0 truncate text-sm text-gray-200">
+                  {/* O nome fica livre para quebrar em duas linhas: pais de nome
+                      longo nao deve espremer os numeros da direita. */}
+                  <span className="min-w-0 flex-1 text-sm leading-tight text-gray-200">
                     {item.country}
                   </span>
-                  <span className="h-2 flex-1 overflow-hidden rounded-full bg-white/5">
-                    <span
-                      className="block h-full rounded-full bg-cyan-400"
-                      style={{ width: `${maxRevenue > 0 ? (item.revenue / maxRevenue) * 100 : 0}%` }}
-                    />
-                  </span>
-                  <span className="w-24 flex-shrink-0 text-right text-sm tabular-nums text-white">
+
+                  <span className="flex-shrink-0 text-sm tabular-nums text-white">
                     {formatCurrency(item.revenue)}
                   </span>
-                  <span className="w-12 flex-shrink-0 text-right text-xs tabular-nums text-gray-500">
+
+                  <ShareRing share={item.share} isActive={isActive} />
+
+                  <span className="w-14 flex-shrink-0 text-right text-sm tabular-nums text-gray-400">
                     {item.share.toFixed(1)}%
                   </span>
                 </button>
@@ -201,5 +198,45 @@ export default function SalesByCountry({ data = [], selected, onSelect }: Props)
         </div>
       )}
     </div>
+  );
+}
+
+/** Raio do anel de participacao. O traco e desenhado sobre esta linha. */
+const RING_RADIUS = 9;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+
+/**
+ * Anel de participacao: mesma leitura de uma barra, porem em largura fixa.
+ * Numa lista onde o nome do pais varia muito de tamanho, a barra horizontal
+ * encolhia e esticava de linha para linha, atrapalhando a comparacao.
+ */
+function ShareRing({ share, isActive }: { share: number; isActive: boolean }) {
+  const filled = Math.min(Math.max(share, 0), 100) / 100;
+
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" className="flex-shrink-0" aria-hidden="true">
+      <circle
+        cx="12"
+        cy="12"
+        r={RING_RADIUS}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        className="text-white/10"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r={RING_RADIUS}
+        fill="none"
+        stroke="#22d3ee"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeDasharray={`${filled * RING_CIRCUMFERENCE} ${RING_CIRCUMFERENCE}`}
+        // Comeca no topo, em vez de as tres horas, que e o padrao do SVG.
+        transform="rotate(-90 12 12)"
+        opacity={isActive ? 1 : 0.85}
+      />
+    </svg>
   );
 }
