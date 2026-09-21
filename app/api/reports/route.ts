@@ -10,7 +10,10 @@ export async function GET(request: Request) {
     const product = searchParams.get('product') || 'qualquer';
     
     // Periodo resolvido no fuso do negocio (ver lib/dates.ts).
-    const { dateStart, dateEnd } = resolvePeriod(period);
+    const { dateStart, dateEnd } = resolvePeriod(period, {
+      dateStart: searchParams.get('dateStart') || undefined,
+      dateEnd: searchParams.get('dateEnd') || undefined,
+    });
 
     const sheets = await getSheetsClient();
     const spreadsheetId = getSpreadsheetId();

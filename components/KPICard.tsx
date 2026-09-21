@@ -38,6 +38,12 @@ interface KPICardProps {
   type?: 'currency' | 'percent' | 'number';
   tooltip?: string;
   inverseColors?: boolean; // Se true, vermelho é bom e verde é ruim (ex: CPA)
+  /**
+   * Esmaece o card e explica no tooltip por que o numero nao e confiavel no
+   * recorte atual. Usado quando ha filtro de pais: o gasto do Meta nao e
+   * separado por pais, entao tudo que deriva dele mistura bases diferentes.
+   */
+  mutedReason?: string;
 }
 
 export default function KPICard({ 
@@ -45,7 +51,8 @@ export default function KPICard({
   value, 
   type = 'currency', 
   tooltip,
-  inverseColors = false 
+  inverseColors = false,
+  mutedReason
 }: KPICardProps) {
 
   const isFlashing = useValueFlash(value);
@@ -81,11 +88,23 @@ export default function KPICard({
   }
 
   return (
-    <div className="bg-[#1E1E1E] rounded-xl px-6 py-5 flex flex-col shadow-sm h-full w-full">
+    <div
+      className={cn(
+        'bg-[#1E1E1E] rounded-xl px-6 py-5 flex flex-col shadow-sm h-full w-full transition-opacity',
+        mutedReason && 'opacity-40'
+      )}
+    >
       <div className="flex justify-between items-start mb-1 flex-shrink-0">
         <h3 className="text-sm font-medium text-gray-400">{title}</h3>
         {tooltip && (
-          <Tooltip content={<p className="max-w-[200px] text-center">{tooltip}</p>}>
+          <Tooltip
+            content={
+              <div className="max-w-[220px] text-center">
+                <p>{tooltip}</p>
+                {mutedReason && <p className="mt-2 text-amber-400">{mutedReason}</p>}
+              </div>
+            }
+          >
             <button className="text-gray-500 hover:text-gray-300 outline-none">
               <Info size={16} />
             </button>

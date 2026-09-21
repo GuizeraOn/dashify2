@@ -4,6 +4,7 @@ import { Info } from 'lucide-react';
 import { useState } from 'react';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Select } from '../ui/Select';
+import DateRangePicker from '../ui/DateRangePicker';
 import { useSummary } from '@/hooks/useSummary';
 
 const periods = [
@@ -28,13 +29,29 @@ export default function Header() {
 
   const currentPeriod = searchParams.get('period') || 'today';
   const currentProduct = searchParams.get('product') || 'qualquer';
+  const dateStart = searchParams.get('dateStart') || undefined;
+  const dateEnd = searchParams.get('dateEnd') || undefined;
 
   // React Query vai reaproveitar o cache gerado pela page.tsx
-  const { data } = useSummary({ period: currentPeriod });
+  const { data } = useSummary({ period: currentPeriod, dateStart, dateEnd });
 
   const handlePeriodChange = (val: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('period', val);
+    // Sair do personalizado descarta as datas: deixa-las para tras faria o
+    // proximo "personalizado" reabrir num intervalo que o usuario ja trocou.
+    if (val !== 'custom') {
+      params.delete('dateStart');
+      params.delete('dateEnd');
+    }
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const handleCustomRange = (range: { dateStart: string; dateEnd: string }) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('period', 'custom');
+    params.set('dateStart', range.dateStart);
+    params.set('dateEnd', range.dateEnd);
     router.push(`${pathname}?${params.toString()}`);
   };
 
@@ -109,6 +126,14 @@ export default function Header() {
             options={periods}
           />
         </div>
+
+        {/* Intervalo personalizado — so aparece quando escolhido */}
+        {currentPeriod === 'custom' && (
+          <div className="flex flex-col gap-1.5 col-span-2">
+            <label className="text-gray-300 text-xs font-medium">Intervalo</label>
+            <DateRangePicker dateStart={dateStart} dateEnd={dateEnd} onApply={handleCustomRange} />
+          </div>
+        )}
 
         {/* Conta de Anúncio */}
         <div className="flex flex-col gap-1.5">

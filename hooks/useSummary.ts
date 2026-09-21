@@ -48,17 +48,28 @@ interface UseSummaryOptions {
   campaign?: string;
   product?: string;
   country?: string;
+  dateStart?: string;
+  dateEnd?: string;
 }
 
-export function useSummary({ period = 'today', campaign, product, country }: UseSummaryOptions = {}) {
+export function useSummary({
+  period = 'today',
+  campaign,
+  product,
+  country,
+  dateStart,
+  dateEnd,
+}: UseSummaryOptions = {}) {
   return useQuery<SummaryData>({
-    queryKey: ['summary', period, campaign, product, country],
+    queryKey: ['summary', period, campaign, product, country, dateStart, dateEnd],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (period) params.append('period', period);
       if (campaign) params.append('campaign', campaign);
       if (product) params.append('product', product);
       if (country) params.append('country', country);
+      if (dateStart) params.append('dateStart', dateStart);
+      if (dateEnd) params.append('dateEnd', dateEnd);
 
       const res = await fetch(`/api/summary?${params.toString()}`);
       if (!res.ok) {

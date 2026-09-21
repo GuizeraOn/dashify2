@@ -23,6 +23,8 @@ export default function DashboardPage() {
   const campaign = searchParams.get('campaign') || undefined;
   const product = searchParams.get('product') || undefined;
   const country = searchParams.get('country') || undefined;
+  const dateStart = searchParams.get('dateStart') || undefined;
+  const dateEnd = searchParams.get('dateEnd') || undefined;
 
   // O pais escolhido vive na URL, junto dos outros filtros: assim o estado
   // sobrevive ao recarregar e o link pode ser compartilhado.
@@ -52,7 +54,7 @@ export default function DashboardPage() {
     autoSync();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { data, isLoading, isError, error } = useSummary({ period, campaign, product, country });
+  const { data, isLoading, isError, error } = useSummary({ period, campaign, product, country, dateStart, dateEnd });
 
   if (isError) {
     return (
@@ -76,6 +78,8 @@ export default function DashboardPage() {
     type?: 'currency' | 'percent' | 'number';
     tooltip: string;
     inverseColors?: boolean;
+    /** Deriva do gasto do Meta, que nao e separado por pais. */
+    dependsOnSpend?: boolean;
   }> = [
     {
       key: 'kpi-net_revenue',
@@ -85,18 +89,21 @@ export default function DashboardPage() {
     },
     {
       key: 'kpi-spend',
+      dependsOnSpend: true,
       title: 'Gastos com Anúncios',
       value: kpis?.spend ?? null,
       tooltip: 'Soma total do custo de campanhas no Meta Ads',
     },
     {
       key: 'kpi-profit',
+      dependsOnSpend: true,
       title: 'Lucro',
       value: kpis?.profit ?? null,
       tooltip: 'Faturamento Líquido - (Gastos com Anúncios + 13% Imposto Meta)',
     },
     {
       key: 'kpi-roi',
+      dependsOnSpend: true,
       title: 'ROI',
       value: kpis?.roas ?? null,
       type: 'number',
@@ -104,6 +111,7 @@ export default function DashboardPage() {
     },
     {
       key: 'kpi-cpa',
+      dependsOnSpend: true,
       title: 'CPA',
       value: kpis?.cpa ?? null,
       inverseColors: true,
@@ -111,6 +119,7 @@ export default function DashboardPage() {
     },
     {
       key: 'kpi-roas',
+      dependsOnSpend: true,
       title: 'ROAS',
       value: kpis?.roi ?? null,
       type: 'number',
@@ -118,6 +127,7 @@ export default function DashboardPage() {
     },
     {
       key: 'kpi-margin',
+      dependsOnSpend: true,
       title: 'Margem de Lucro',
       value: kpis?.profit_margin ?? null,
       type: 'percent',
@@ -154,6 +164,11 @@ export default function DashboardPage() {
                 type={item.type}
                 tooltip={item.tooltip}
                 inverseColors={item.inverseColors}
+                mutedReason={
+                  country && item.dependsOnSpend
+                    ? `O gasto do Meta não é separado por país, então este número mistura o faturamento de ${country} com o gasto de todos os países.`
+                    : undefined
+                }
               />
             )}
           </div>

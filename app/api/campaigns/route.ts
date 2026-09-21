@@ -8,7 +8,10 @@ export async function GET(request: Request) {
     const period = searchParams.get('period') || 'today';
     
     // Periodo resolvido no fuso do negocio (ver lib/dates.ts).
-    const { dateStart, dateEnd } = resolvePeriod(period);
+    const { dateStart, dateEnd } = resolvePeriod(period, {
+      dateStart: searchParams.get('dateStart') || undefined,
+      dateEnd: searchParams.get('dateEnd') || undefined,
+    });
 
     let query = getSupabaseAdmin().from('meta_ads_insights').select('*');
     if (dateStart) query = query.gte('date', dateStart);
