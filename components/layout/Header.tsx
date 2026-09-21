@@ -6,6 +6,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { Select } from '../ui/Select';
 import DateRangePicker from '../ui/DateRangePicker';
 import { useSummary } from '@/hooks/useSummary';
+import { useSalesWatcher } from '@/hooks/useSalesWatcher';
 import { useRefreshStore } from '@/store/refreshStore';
 
 const periods = [
@@ -36,6 +37,10 @@ export default function Header() {
 
   // React Query vai reaproveitar o cache gerado pela page.tsx
   const { data } = useSummary({ period: currentPeriod, dateStart, dateEnd });
+
+  // Vigia a planilha: quando entra venda nova (ou uma muda de status), os
+  // dados sao invalidados e o painel recarrega com a mesma animacao do botao.
+  useSalesWatcher(() => setLastSynced(new Date()));
 
   const handlePeriodChange = (val: string) => {
     const params = new URLSearchParams(searchParams.toString());

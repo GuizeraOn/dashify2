@@ -18,6 +18,9 @@ TanStack Query · Recharts · react-grid-layout · Supabase.
   clicáveis para filtrar o dashboard), heatmap por hora.
 - **Páginas** — Vendas, Campanhas, Relatórios e Configurações.
 - **Sincronização automática** com o Meta Ads ao abrir o dashboard.
+- **Recarga automática** quando a planilha muda — o dashboard consulta uma
+  assinatura leve da planilha a cada 30s (`/api/sales-pulse`) e só recarrega os
+  dados, com animação, quando ela muda de fato.
 
 ## PWA
 
