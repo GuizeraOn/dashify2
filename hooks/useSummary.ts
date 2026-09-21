@@ -18,6 +18,7 @@ export interface SummaryData {
   };
   funnel_stats?: FunnelStats;
   country_stats?: CountryStat[];
+  weekday_stats?: WeekdayStat[];
   available_products?: string[];
 }
 
@@ -26,6 +27,17 @@ export interface CountryStat {
   revenue: number;
   orders: number;
   /** Participacao no faturamento aprovado, em porcentagem. */
+  share: number;
+}
+
+export interface WeekdayStat {
+  /** 0 = domingo, como no getUTCDay. */
+  weekday: number;
+  label: string;
+  /** Abreviacao de tres letras, para o eixo do grafico. */
+  short: string;
+  revenue: number;
+  orders: number;
   share: number;
 }
 

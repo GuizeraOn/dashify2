@@ -14,6 +14,7 @@ import PaymentMethodChart from '@/components/charts/PaymentMethodChart';
 import CardApprovalChart from '@/components/charts/CardApprovalChart';
 import MetaConversionFunnel from '@/components/charts/MetaConversionFunnel';
 import SalesByCountry from '@/components/charts/SalesByCountry';
+import SalesByWeekday from '@/components/charts/SalesByWeekday';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Info } from 'lucide-react';
 
@@ -279,6 +280,19 @@ export default function DashboardPage() {
                 onSelect={handleCountrySelect}
               />
             )}
+          </div>
+        </div>
+
+        <div key="chart-weekday" className="bg-[#1E1E1E] rounded-xl p-5 flex flex-col shadow-sm h-full w-full">
+          {/* Titulo e alternancia Barras/Ranking ficam dentro do componente,
+              na mesma linha — o seletor precisa do estado da visualizacao. */}
+          <div
+            className={cn(
+              'flex-1 w-full relative min-h-0 transition-opacity duration-200',
+              isRefreshing && 'opacity-0'
+            )}
+          >
+            {isLoading ? <ChartSkeleton /> : <SalesByWeekday data={data?.weekday_stats} />}
           </div>
         </div>
 

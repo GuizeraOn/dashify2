@@ -180,6 +180,36 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.revenue - a.revenue);
 
+    // Vendas por dia da semana. Respeita os filtros ativos, inclusive o de
+    // pais: a pergunta aqui e "em que dia este recorte vende", e nao existe
+    // etapa global como no funil.
+    const WEEKDAY_LABELS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const weekdayTotals = WEEKDAY_LABELS.map(() => ({ revenue: 0, orders: 0 }));
+
+    vendasData.forEach(row => {
+      if (row.status.toLowerCase().trim() !== 'aprovado') return;
+
+      // A planilha guarda a data como texto no horario local do negocio.
+      // Montando a partir dos numeros para o dia da semana nao escorregar:
+      // new Date('2026-09-20') seria lido como UTC e voltaria um dia.
+      const [year, month, day] = row.date.substring(0, 10).split('-').map(Number);
+      if (!year || !month || !day) return;
+
+      const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+      weekdayTotals[weekday].revenue += row.net_revenue_brl || 0;
+      weekdayTotals[weekday].orders += 1;
+    });
+
+    const weekdayRevenue = weekdayTotals.reduce((total, item) => total + item.revenue, 0);
+    const weekday_stats = WEEKDAY_LABELS.map((label, index) => ({
+      weekday: index,
+      label,
+      short: label.substring(0, 3),
+      revenue: weekdayTotals[index].revenue,
+      orders: weekdayTotals[index].orders,
+      share: weekdayRevenue > 0 ? (weekdayTotals[index].revenue / weekdayRevenue) * 100 : 0,
+    }));
+
     return NextResponse.json({ 
       kpis, 
       metadata: { dateStart, dateEnd },
@@ -188,6 +218,7 @@ export async function GET(request: NextRequest) {
       card_approval_stats,
       funnel_stats,
       country_stats,
+      weekday_stats,
       available_products
     });
   } catch (error: any) {

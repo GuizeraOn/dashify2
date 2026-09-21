@@ -15,7 +15,8 @@ TanStack Query · Recharts · react-grid-layout · Supabase.
   margem, vendas pendentes e reembolsos.
 - **Gráficos** — faturamento vs. gasto diário, meios de pagamento, aprovação de
   cartão, funil de conversão (Meta Ads), vendas por país (mapa ou ranking,
-  clicáveis para filtrar o dashboard), heatmap por hora.
+  clicáveis para filtrar o dashboard), vendas por dia da semana (barras ou
+  ranking), heatmap por hora.
 - **Páginas** — Vendas, Campanhas, Relatórios e Configurações.
 - **Sincronização automática** com o Meta Ads ao abrir o dashboard.
 - **Recarga automática** quando a planilha muda — o dashboard consulta uma

@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { CountryStat } from '@/hooks/useSummary';
 import { lookupCountryCoords, projectLngLat } from '@/lib/geo';
 import { WORLD_HEIGHT, WORLD_LAND_PATH, WORLD_WIDTH } from '@/lib/world-map';
+import ShareRing from '@/components/ui/ShareRing';
 
 interface Props {
   data?: CountryStat[];
@@ -198,45 +199,5 @@ export default function SalesByCountry({ data = [], selected, onSelect }: Props)
         </div>
       )}
     </div>
-  );
-}
-
-/** Raio do anel de participacao. O traco e desenhado sobre esta linha. */
-const RING_RADIUS = 9;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-
-/**
- * Anel de participacao: mesma leitura de uma barra, porem em largura fixa.
- * Numa lista onde o nome do pais varia muito de tamanho, a barra horizontal
- * encolhia e esticava de linha para linha, atrapalhando a comparacao.
- */
-function ShareRing({ share, isActive }: { share: number; isActive: boolean }) {
-  const filled = Math.min(Math.max(share, 0), 100) / 100;
-
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" className="flex-shrink-0" aria-hidden="true">
-      <circle
-        cx="12"
-        cy="12"
-        r={RING_RADIUS}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        className="text-white/10"
-      />
-      <circle
-        cx="12"
-        cy="12"
-        r={RING_RADIUS}
-        fill="none"
-        stroke="#22d3ee"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeDasharray={`${filled * RING_CIRCUMFERENCE} ${RING_CIRCUMFERENCE}`}
-        // Comeca no topo, em vez de as tres horas, que e o padrao do SVG.
-        transform="rotate(-90 12 12)"
-        opacity={isActive ? 1 : 0.85}
-      />
-    </svg>
   );
 }

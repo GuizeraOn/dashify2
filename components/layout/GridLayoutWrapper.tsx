@@ -30,6 +30,7 @@ const DEFAULT_LAYOUTS = {
     { i: 'chart-card_approval',  x: 0, y: 6, w: 4, h: 3, minW: 2 },
     { i: 'chart-funnel',         x: 4, y: 6, w: 4, h: 3, minW: 3 },
     { i: 'chart-country',        x: 0, y: 9, w: 5, h: 4, minW: 3 },
+    { i: 'chart-weekday',        x: 5, y: 9, w: 3, h: 4, minW: 2 },
   ],
 };
 
