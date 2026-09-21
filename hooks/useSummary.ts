@@ -40,6 +40,8 @@ export interface FunnelStats {
   clicks_are_link_clicks: boolean;
   /** true quando a ultima etapa conta apenas os produtos de front. */
   approved_is_front_only: boolean;
+  /** true quando ha pais filtrado e o funil seguiu global mesmo assim. */
+  ignores_country_filter: boolean;
   steps: FunnelStep[];
 }
 

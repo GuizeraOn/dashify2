@@ -207,6 +207,12 @@ export default function DashboardPage() {
                       ? ', contando apenas os produtos de front.'
                       : '.'}
                   </p>
+                  {data?.funnel_stats?.ignores_country_filter && (
+                    <p className="mt-2 text-amber-400">
+                      O Meta não separa cliques, visualizações e ICs por país, então
+                      o funil continua mostrando o total mesmo com {country} filtrado.
+                    </p>
+                  )}
                   {data?.funnel_stats && !data.funnel_stats.clicks_are_link_clicks && (
                     <p className="mt-2 text-amber-400">A conta não reporta cliques no link; usando o total de cliques.</p>
                   )}

@@ -57,9 +57,10 @@ export async function GET(request: NextRequest) {
       vendasData = vendasData.filter(row => row.produto === product);
     }
 
-    // O ranking/mapa por pais precisa da lista completa para calcular a
-    // participacao de cada um, entao e capturado antes do filtro de pais.
-    const vendasForCountries = vendasData;
+    // Guardado antes do filtro de pais porque dois consumidores precisam da
+    // lista inteira: o ranking/mapa, para calcular a participacao de cada pais,
+    // e o funil, cujas etapas do Meta sao sempre globais.
+    const vendasBeforeCountryFilter = vendasData;
 
     if (country && country !== 'todos') {
       vendasData = vendasData.filter(row => row.country === country);
@@ -133,7 +134,11 @@ export async function GET(request: NextRequest) {
     // So produtos de front entram na ultima etapa: order bump e upsell acontecem
     // depois do checkout e inflariam a conversao do anuncio. Mesma regra do CPA
     // — sem produtos de front configurados, conta todas as aprovadas.
-    const approvedVendas = vendasData.filter(
+    //
+    // E de proposito que aqui se ignora o filtro de pais: cliques, visualizacoes
+    // e ICs vem do Meta sem separacao geografica. Cruzar vendas de um pais com
+    // etapas do mundo inteiro daria uma conversao que nao significa nada.
+    const approvedVendas = vendasBeforeCountryFilter.filter(
       row => row.status.toLowerCase().trim() === 'aprovado'
     );
     const approvedCount = frontProducts.length > 0
@@ -145,6 +150,8 @@ export async function GET(request: NextRequest) {
       clicks_are_link_clicks: linkClicks > 0,
       // Verdadeiro quando a ultima etapa esta restrita aos produtos de front.
       approved_is_front_only: frontProducts.length > 0,
+      // Avisa a interface que o funil segue global mesmo com pais filtrado.
+      ignores_country_filter: Boolean(country && country !== 'todos'),
       steps: [
         { key: 'clicks', label: 'Cliques', count: clicks },
         { key: 'landing_page_views', label: 'Vis. Página', count: sum('landing_page_views') },
@@ -155,7 +162,7 @@ export async function GET(request: NextRequest) {
 
     // Vendas por pais: so as aprovadas, que sao as que viraram dinheiro.
     const countryTotals: Record<string, { revenue: number; orders: number }> = {};
-    vendasForCountries.forEach(row => {
+    vendasBeforeCountryFilter.forEach(row => {
       if (row.status.toLowerCase().trim() !== 'aprovado') return;
       const name = row.country || 'Desconhecido';
       if (!countryTotals[name]) countryTotals[name] = { revenue: 0, orders: 0 };
