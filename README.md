@@ -85,6 +85,11 @@ Todas estão documentadas em [`.env.example`](./.env.example):
 | `AD_ACCOUNT_ID` | servidor | ID da conta de anúncios (com ou sem `act_`) |
 | `NEXT_PUBLIC_SUPABASE_URL` | cliente/servidor | URL do projeto Supabase |
 | `SUPABASE_SERVICE_ROLE_KEY` | **somente servidor** | Chave `service_role` do Supabase |
+| `APP_TIMEZONE` | servidor | Opcional. Fuso usado para resolver os períodos. Padrão `America/Sao_Paulo` |
+
+> Os períodos ("hoje", "ontem", "este mês") são resolvidos em `APP_TIMEZONE`,
+> nunca no fuso do servidor — a Vercel roda em UTC, e às 21h de Brasília o UTC
+> já virou o dia seguinte. Ver [`lib/dates.ts`](./lib/dates.ts).
 
 > A `SUPABASE_SERVICE_ROLE_KEY` ignora Row Level Security. Ela só é lida em
 > código de servidor (`lib/supabase.ts`) e nunca deve receber o prefixo

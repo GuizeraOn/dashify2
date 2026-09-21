@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { addDays, formatDay, startOfToday } from '@/lib/dates';
 
 // Constants mimicking the Apps Script
 const API_VERSION = 'v25.0';
@@ -17,14 +18,12 @@ export async function POST() {
       return NextResponse.json({ error: 'Missing META_TOKEN or AD_ACCOUNT_ID' }, { status: 400 });
     }
 
-    // Dates
-    const tzOffset = new Date().getTimezoneOffset() * 60000;
-    const now = new Date(Date.now() - tzOffset);
-    const until = now.toISOString().split('T')[0];
-    
-    const sinceDate = new Date(now);
-    sinceDate.setDate(sinceDate.getDate() - LOOKBACK_DAYS);
-    const since = sinceDate.toISOString().split('T')[0];
+    // A janela usa o fuso do negocio — que e tambem o da conta de anuncios, ja
+    // que o breakdown e por fuso do anunciante. Antes isto usava o fuso do
+    // servidor: correto na maquina do desenvolvedor, UTC na Vercel.
+    const today = startOfToday();
+    const until = formatDay(today);
+    const since = formatDay(addDays(today, -LOOKBACK_DAYS));
 
     const dimFields = ['account_id', 'account_name', 'account_currency', 'campaign_id', 'campaign_name'];
     if (LEVEL === 'adset' || LEVEL === 'ad') dimFields.push('adset_id', 'adset_name');

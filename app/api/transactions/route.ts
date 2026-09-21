@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { resolvePeriod } from '@/lib/dates';
 import { getSheetsClient, getSpreadsheetId } from '@/lib/sheets';
 import { parseVendas } from '@/lib/parsers/vendas';
 
@@ -20,45 +21,8 @@ export async function GET(request: Request) {
     const period = searchParams.get('period') || 'today';
     const product = searchParams.get('product') || 'qualquer';
     
-    // Resolve period logic identical to summary
-    let dateStart: string | undefined;
-    let dateEnd: string | undefined;
-    const now = new Date();
-    const formatDate = (d: Date) => d.toISOString().split('T')[0];
-
-    if (period === 'today') {
-      dateStart = formatDate(now);
-      dateEnd = dateStart;
-    } else if (period === 'yesterday') {
-      const yesterday = new Date(now);
-      yesterday.setDate(yesterday.getDate() - 1);
-      dateStart = formatDate(yesterday);
-      dateEnd = dateStart;
-    } else if (period === 'last_7_days') {
-      const start = new Date(now);
-      start.setDate(start.getDate() - 6);
-      dateStart = formatDate(start);
-      dateEnd = formatDate(now);
-    } else if (period === 'last_14_days') {
-      const start = new Date(now);
-      start.setDate(start.getDate() - 13);
-      dateStart = formatDate(start);
-      dateEnd = formatDate(now);
-    } else if (period === 'last_30_days') {
-      const start = new Date(now);
-      start.setDate(start.getDate() - 29);
-      dateStart = formatDate(start);
-      dateEnd = formatDate(now);
-    } else if (period === 'this_month') {
-      dateStart = formatDate(new Date(now.getFullYear(), now.getMonth(), 1));
-      dateEnd = formatDate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
-    } else if (period === 'last_month') {
-      dateStart = formatDate(new Date(now.getFullYear(), now.getMonth() - 1, 1));
-      dateEnd = formatDate(new Date(now.getFullYear(), now.getMonth(), 0));
-    } else if (period === 'maximum') {
-      dateStart = undefined;
-      dateEnd = undefined;
-    }
+    // Periodo resolvido no fuso do negocio (ver lib/dates.ts).
+    const { dateStart, dateEnd } = resolvePeriod(period);
 
     const sheets = await getSheetsClient();
     const spreadsheetId = getSpreadsheetId();
