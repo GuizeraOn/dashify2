@@ -17,7 +17,16 @@ export interface SummaryData {
     breakdown: { status: string; count: number }[];
   };
   funnel_stats?: FunnelStats;
+  country_stats?: CountryStat[];
   available_products?: string[];
+}
+
+export interface CountryStat {
+  country: string;
+  revenue: number;
+  orders: number;
+  /** Participacao no faturamento aprovado, em porcentagem. */
+  share: number;
 }
 
 export interface FunnelStep {
@@ -38,16 +47,18 @@ interface UseSummaryOptions {
   period?: string;
   campaign?: string;
   product?: string;
+  country?: string;
 }
 
-export function useSummary({ period = 'today', campaign, product }: UseSummaryOptions = {}) {
+export function useSummary({ period = 'today', campaign, product, country }: UseSummaryOptions = {}) {
   return useQuery<SummaryData>({
-    queryKey: ['summary', period, campaign, product],
+    queryKey: ['summary', period, campaign, product, country],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (period) params.append('period', period);
       if (campaign) params.append('campaign', campaign);
       if (product) params.append('product', product);
+      if (country) params.append('country', country);
 
       const res = await fetch(`/api/summary?${params.toString()}`);
       if (!res.ok) {

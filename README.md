@@ -14,7 +14,8 @@ TanStack Query · Recharts · react-grid-layout · Supabase.
 - **KPIs consolidados** — faturamento líquido, gastos, lucro, ROI, ROAS, CPA,
   margem, vendas pendentes e reembolsos.
 - **Gráficos** — faturamento vs. gasto diário, meios de pagamento, aprovação de
-  cartão, funil de conversão, heatmap por hora e ranking por país.
+  cartão, funil de conversão (Meta Ads), vendas por país (mapa ou ranking,
+  clicáveis para filtrar o dashboard), heatmap por hora.
 - **Páginas** — Vendas, Campanhas, Relatórios e Configurações.
 - **Sincronização automática** com o Meta Ads ao abrir o dashboard.
 
@@ -34,6 +35,21 @@ superior, e no iPhone funciona via *Compartilhar → Adicionar à Tela de Iníci
   imagens em `public/splash/`, uma por resolução. Além disso há uma tela de
   abertura dentro do app (`#app-splash`), visível apenas com o app instalado,
   que cobre a janela enquanto o JavaScript carrega.
+
+### Regerando o mapa-múndi
+
+O card "Vendas por País" usa uma silhueta dos continentes pré-projetada, não
+uma biblioteca de mapas: o runtime recebe só uma string de path SVG e uma
+tabela de centroides, e `d3-geo`/`topojson-client`/`world-atlas` ficam em
+devDependencies.
+
+```bash
+node scripts/generate-world-map.mjs
+```
+
+Regenere se quiser mudar a resolução ou a projeção. Trocando a projeção,
+ajuste também `projectLngLat` em [`lib/geo.ts`](./lib/geo.ts) — é ela que
+posiciona os pontos e precisa casar com a usada na geração.
 
 ### Regerando os ícones e as telas de abertura
 

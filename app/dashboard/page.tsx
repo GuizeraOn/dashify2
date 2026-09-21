@@ -1,7 +1,7 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSummary } from '@/hooks/useSummary';
 import KPICard from '@/components/KPICard';
@@ -11,15 +11,33 @@ import RevenueVsSpendChart from '@/components/charts/RevenueVsSpendChart';
 import PaymentMethodChart from '@/components/charts/PaymentMethodChart';
 import CardApprovalChart from '@/components/charts/CardApprovalChart';
 import MetaConversionFunnel from '@/components/charts/MetaConversionFunnel';
+import SalesByCountry from '@/components/charts/SalesByCountry';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Info } from 'lucide-react';
 
 export default function DashboardPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const period = searchParams.get('period') || 'today';
   const campaign = searchParams.get('campaign') || undefined;
   const product = searchParams.get('product') || undefined;
+  const country = searchParams.get('country') || undefined;
+
+  // O pais escolhido vive na URL, junto dos outros filtros: assim o estado
+  // sobrevive ao recarregar e o link pode ser compartilhado.
+  const handleCountrySelect = useCallback(
+    (next: string | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (next) {
+        params.set('country', next);
+      } else {
+        params.delete('country');
+      }
+      router.replace(`/dashboard?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams]
+  );
 
   // Sincroniza dados do Meta automaticamente ao entrar no dashboard
   useEffect(() => {
@@ -34,7 +52,7 @@ export default function DashboardPage() {
     autoSync();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { data, isLoading, isError, error } = useSummary({ period, campaign, product });
+  const { data, isLoading, isError, error } = useSummary({ period, campaign, product, country });
 
   if (isError) {
     return (
@@ -187,6 +205,22 @@ export default function DashboardPage() {
           </div>
           <div className="flex-1 w-full relative min-h-0">
             {isLoading ? <ChartSkeleton /> : <MetaConversionFunnel data={data?.funnel_stats} />}
+          </div>
+        </div>
+
+        <div key="chart-country" className="bg-[#1E1E1E] rounded-xl p-5 flex flex-col shadow-sm h-full w-full">
+          {/* Titulo e alternancia Ranking/Mapa ficam dentro do componente, na
+              mesma linha — o seletor precisa do estado da visualizacao. */}
+          <div className="flex-1 w-full relative min-h-0">
+            {isLoading ? (
+              <ChartSkeleton />
+            ) : (
+              <SalesByCountry
+                data={data?.country_stats}
+                selected={country}
+                onSelect={handleCountrySelect}
+              />
+            )}
           </div>
         </div>
 

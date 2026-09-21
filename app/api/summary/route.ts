@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
     const period = searchParams.get('period');
     const campaign = searchParams.get('campaign');
     const product = searchParams.get('product');
+    const country = searchParams.get('country');
 
     // Periodo resolvido no fuso do negocio (ver lib/dates.ts). Datas soltas na
     // query continuam valendo quando nenhum periodo nomeado e informado.
@@ -54,6 +55,14 @@ export async function GET(request: NextRequest) {
 
     if (product && product !== 'qualquer') {
       vendasData = vendasData.filter(row => row.produto === product);
+    }
+
+    // O ranking/mapa por pais precisa da lista completa para calcular a
+    // participacao de cada um, entao e capturado antes do filtro de pais.
+    const vendasForCountries = vendasData;
+
+    if (country && country !== 'todos') {
+      vendasData = vendasData.filter(row => row.country === country);
     }
 
     const kpis = calculateKPIs(metaData, vendasData, frontProducts);
@@ -144,6 +153,26 @@ export async function GET(request: NextRequest) {
       ],
     };
 
+    // Vendas por pais: so as aprovadas, que sao as que viraram dinheiro.
+    const countryTotals: Record<string, { revenue: number; orders: number }> = {};
+    vendasForCountries.forEach(row => {
+      if (row.status.toLowerCase().trim() !== 'aprovado') return;
+      const name = row.country || 'Desconhecido';
+      if (!countryTotals[name]) countryTotals[name] = { revenue: 0, orders: 0 };
+      countryTotals[name].revenue += row.net_revenue_brl || 0;
+      countryTotals[name].orders += 1;
+    });
+
+    const countriesRevenue = Object.values(countryTotals).reduce((total, c) => total + c.revenue, 0);
+    const country_stats = Object.entries(countryTotals)
+      .map(([name, totals]) => ({
+        country: name,
+        revenue: totals.revenue,
+        orders: totals.orders,
+        share: countriesRevenue > 0 ? (totals.revenue / countriesRevenue) * 100 : 0,
+      }))
+      .sort((a, b) => b.revenue - a.revenue);
+
     return NextResponse.json({ 
       kpis, 
       metadata: { dateStart, dateEnd },
@@ -151,6 +180,7 @@ export async function GET(request: NextRequest) {
       payment_stats,
       card_approval_stats,
       funnel_stats,
+      country_stats,
       available_products
     });
   } catch (error: any) {
