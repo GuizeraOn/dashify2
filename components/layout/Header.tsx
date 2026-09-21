@@ -6,6 +6,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { Select } from '../ui/Select';
 import DateRangePicker from '../ui/DateRangePicker';
 import { useSummary } from '@/hooks/useSummary';
+import { useRefreshStore } from '@/store/refreshStore';
 
 const periods = [
   { label: 'Hoje', value: 'today' },
@@ -24,7 +25,8 @@ export default function Header() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  // Compartilhado com os cards: eles escondem os numeros enquanto isto durar.
+  const { isRefreshing, setRefreshing } = useRefreshStore();
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
 
   const currentPeriod = searchParams.get('period') || 'today';
@@ -67,15 +69,17 @@ export default function Header() {
   ];
 
   const handleRefresh = async () => {
-    setIsRefreshing(true);
+    setRefreshing(true);
     try {
       await fetch('/api/meta/sync', { method: 'POST' });
+      // invalidateQueries so resolve depois que as consultas ativas terminam
+      // de buscar, entao a bandeira cobre o ciclo inteiro.
       await queryClient.invalidateQueries();
       setLastSynced(new Date());
     } catch (e) {
       console.error(e);
     } finally {
-      setIsRefreshing(false);
+      setRefreshing(false);
     }
   };
 

@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSummary } from '@/hooks/useSummary';
-import { useRefreshPulse } from '@/hooks/useRefreshPulse';
+import { useRefreshStore } from '@/store/refreshStore';
 import KPICard from '@/components/KPICard';
 import GridLayoutWrapper from '@/components/layout/GridLayoutWrapper';
 import { KPISkeleton, ChartSkeleton } from '@/components/LoadingSkeleton';
@@ -55,7 +55,7 @@ export default function DashboardPage() {
     autoSync();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { data, isLoading, isError, error, dataUpdatedAt } = useSummary({
+  const { data, isLoading, isError, error, isFetching } = useSummary({
     period,
     campaign,
     product,
@@ -64,8 +64,12 @@ export default function DashboardPage() {
     dateEnd,
   });
 
-  // Todos os numeros somem e voltam juntos quando chegam dados novos.
-  const isRefreshing = useRefreshPulse(dataUpdatedAt);
+  // Os numeros somem no inicio da atualizacao e so voltam com os dados novos.
+  // A bandeira do store cobre o "Atualizar" do Header, que comeca pela
+  // sincronizacao do Meta; o isFetching cobre as demais rebuscas. O isLoading
+  // fica de fora porque ali quem aparece e o esqueleto, nao os numeros.
+  const isRefreshingFromHeader = useRefreshStore((state) => state.isRefreshing);
+  const isRefreshing = isRefreshingFromHeader || (isFetching && !isLoading);
 
   if (isError) {
     return (
