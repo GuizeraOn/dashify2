@@ -5,6 +5,7 @@ import { useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSummary } from '@/hooks/useSummary';
 import { useRefreshStore } from '@/store/refreshStore';
+import { cn } from '@/lib/utils';
 import KPICard from '@/components/KPICard';
 import GridLayoutWrapper from '@/components/layout/GridLayoutWrapper';
 import { KPISkeleton, ChartSkeleton } from '@/components/LoadingSkeleton';
@@ -195,7 +196,12 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-6 flex-shrink-0">
             <h3 className="font-semibold text-gray-200">Faturamento vs Gasto Diário</h3>
           </div>
-          <div className="flex-1 w-full relative min-h-0">
+          <div
+            className={cn(
+              'flex-1 w-full relative min-h-0 transition-opacity duration-200',
+              isRefreshing && 'opacity-0'
+            )}
+          >
             {isLoading ? <ChartSkeleton /> : <RevenueVsSpendChart data={data?.daily_stats} />}
           </div>
         </div>
@@ -204,7 +210,12 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-6 flex-shrink-0">
             <h3 className="font-semibold text-gray-200">Meios de Pagamento</h3>
           </div>
-          <div className="flex-1 w-full relative min-h-0">
+          <div
+            className={cn(
+              'flex-1 w-full relative min-h-0 transition-opacity duration-200',
+              isRefreshing && 'opacity-0'
+            )}
+          >
             {isLoading ? <ChartSkeleton /> : <PaymentMethodChart data={data?.payment_stats} />}
           </div>
         </div>
@@ -240,7 +251,12 @@ export default function DashboardPage() {
               </button>
             </Tooltip>
           </div>
-          <div className="flex-1 w-full relative min-h-0">
+          <div
+            className={cn(
+              'flex-1 w-full relative min-h-0 transition-opacity duration-200',
+              isRefreshing && 'opacity-0'
+            )}
+          >
             {isLoading ? <ChartSkeleton /> : <MetaConversionFunnel data={data?.funnel_stats} />}
           </div>
         </div>
@@ -248,7 +264,12 @@ export default function DashboardPage() {
         <div key="chart-country" className="bg-[#1E1E1E] rounded-xl p-5 flex flex-col shadow-sm h-full w-full">
           {/* Titulo e alternancia Ranking/Mapa ficam dentro do componente, na
               mesma linha — o seletor precisa do estado da visualizacao. */}
-          <div className="flex-1 w-full relative min-h-0">
+          <div
+            className={cn(
+              'flex-1 w-full relative min-h-0 transition-opacity duration-200',
+              isRefreshing && 'opacity-0'
+            )}
+          >
             {isLoading ? (
               <ChartSkeleton />
             ) : (
@@ -262,7 +283,12 @@ export default function DashboardPage() {
         </div>
 
         <div key="chart-card_approval" className="bg-[#1E1E1E] rounded-xl p-5 flex flex-col shadow-sm h-full w-full">
-          <div className="flex-1 w-full relative min-h-0">
+          <div
+            className={cn(
+              'flex-1 w-full relative min-h-0 transition-opacity duration-200',
+              isRefreshing && 'opacity-0'
+            )}
+          >
             {isLoading ? <ChartSkeleton /> : <CardApprovalChart data={data?.card_approval_stats} />}
           </div>
         </div>
