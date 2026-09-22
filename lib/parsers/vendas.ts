@@ -54,6 +54,38 @@ const countryMap: Record<string, string> = {
   'reino unido': 'Reino Unido',
   canada: 'Canadá',
   venezuela: 'Venezuela',
+
+  // A Perfect Pay passou a mandar o pais como codigo ISO de duas letras em vez
+  // do nome por extenso. Sem estas entradas o card de vendas por pais mostraria
+  // "AR" e nao acharia a coordenada no mapa.
+  ar: 'Argentina',
+  bo: 'Bolívia',
+  br: 'Brasil',
+  ca: 'Canadá',
+  ch: 'Suíça',
+  cl: 'Chile',
+  co: 'Colômbia',
+  cr: 'Costa Rica',
+  de: 'Alemanha',
+  do: 'República Dominicana',
+  ec: 'Equador',
+  es: 'Espanha',
+  fr: 'França',
+  gb: 'Reino Unido',
+  gt: 'Guatemala',
+  hn: 'Honduras',
+  it: 'Itália',
+  mx: 'México',
+  ni: 'Nicarágua',
+  pa: 'Panamá',
+  pe: 'Peru',
+  pr: 'Porto Rico',
+  pt: 'Portugal',
+  py: 'Paraguai',
+  sv: 'El Salvador',
+  us: 'Estados Unidos',
+  uy: 'Uruguai',
+  ve: 'Venezuela',
 };
 
 export function parseVendas(rows: any[][]): VendasRow[] {
@@ -98,11 +130,14 @@ export function parseVendas(rows: any[][]): VendasRow[] {
   const getValue = (row: any[], keys: string[], fallbackIndex?: number) => {
     for (const key of keys) {
       if (headerMap[key] !== undefined) {
-        return row[headerMap[key]];
+        // Linha mais curta que o cabecalho devolve undefined aqui, e o
+        // String(undefined) a frente viraria o texto "undefined". Acontece nas
+        // vendas anteriores as colunas de UTM existirem.
+        return row[headerMap[key]] ?? '';
       }
     }
     if (fallbackIndex !== undefined && row.length > fallbackIndex) {
-      return row[fallbackIndex];
+      return row[fallbackIndex] ?? '';
     }
     return '';
   };
