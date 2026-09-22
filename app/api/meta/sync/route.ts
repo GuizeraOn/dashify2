@@ -4,9 +4,23 @@ import { addDays, formatDay, startOfToday } from '@/lib/dates';
 
 // Constants mimicking the Apps Script
 const API_VERSION = 'v25.0';
-const LEVEL: string = 'campaign';
+/**
+ * Nivel da consulta ao Meta.
+ *
+ * Em 'ad' cada linha ja vem com campanha, conjunto e anuncio juntos, entao a
+ * mesma tabela alimenta os tres niveis da aba Campanhas — basta somar por uma
+ * coluna ou por outra. O preco e o volume: o numero de linhas vira
+ * anuncios x horas x dias, e nao mais campanhas x horas x dias.
+ */
+const LEVEL: string = 'ad';
 const LOOKBACK_DAYS = 7;
 const ROW_LIMIT = 500;
+/**
+ * Paginas por sincronizacao. Com ~2.000 linhas por janela no nivel de anuncio,
+ * 500 por pagina, sobra folga. O limite existe so para nao girar para sempre
+ * se o Meta devolver um cursor circular.
+ */
+const PAGE_GUARD = 60;
 const BREAKDOWN = 'hourly_stats_aggregated_by_advertiser_time_zone';
 
 export async function POST() {
@@ -54,7 +68,7 @@ export async function POST() {
       return 0;
     };
 
-    while (url && guard < 30) { // Limit pagination guard
+    while (url && guard < PAGE_GUARD) {
       guard++;
       const res: Response = await fetch(url);
       const data: any = await res.json();
@@ -116,6 +130,8 @@ export async function POST() {
       url = (data.paging && data.paging.next) ? data.paging.next : null;
     }
 
+    let purged = 0;
+
     if (rowsToUpsert.length > 0) {
       // Upsert into Supabase
       const { error } = await getSupabaseAdmin()
@@ -125,9 +141,38 @@ export async function POST() {
       if (error) {
         throw new Error('Supabase Upsert Error: ' + error.message);
       }
+
+      /**
+       * Faxina das linhas antigas, de quando a sincronizacao era por campanha.
+       *
+       * A chave delas e `data|hora|campanha`; a das novas inclui conjunto e
+       * anuncio. Sao chaves diferentes, entao o upsert nao substitui: as duas
+       * versoes do mesmo dia conviveriam na tabela e qualquer soma de gasto
+       * contaria o mesmo dinheiro duas vezes.
+       *
+       * So apaga o que esta dentro da janela recem-gravada, e so se a paginacao
+       * terminou — se o Meta ficou devendo pagina, o que veio pode estar
+       * incompleto e o antigo ainda e a melhor informacao que temos. Dias
+       * anteriores a virada continuam intactos: la a linha por campanha e a
+       * unica que existe, e e melhor um gasto sem quebra do que gasto nenhum.
+       */
+      if (!url) {
+        const { count, error: purgeError } = await getSupabaseAdmin()
+          .from('meta_ads_insights')
+          .delete({ count: 'exact' })
+          .is('ad_id', null)
+          .gte('date', since)
+          .lte('date', until);
+
+        if (purgeError) {
+          throw new Error('Supabase Purge Error: ' + purgeError.message);
+        }
+
+        purged = count || 0;
+      }
     }
 
-    return NextResponse.json({ success: true, processed: rowsToUpsert.length });
+    return NextResponse.json({ success: true, processed: rowsToUpsert.length, purged });
 
   } catch (error: any) {
     console.error('Meta Sync Error:', error);
