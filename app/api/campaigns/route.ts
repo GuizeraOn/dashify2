@@ -7,28 +7,29 @@ import { filterVendasByDate } from '@/lib/kpis';
 import { META_TAX_MULTIPLIER } from '@/lib/kpis';
 import { VendasRow } from '@/lib/types';
 
-/** Sem acento, sem caixa e sem espaco sobrando. */
-function normalize(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-    .trim();
-}
-
 /**
- * O utm_campaign chega pela URL do anuncio, entao pode vir percent-encoded e
- * com "+" no lugar de espaco. Nomes de campanha aqui tem barra vertical,
- * colchete e apostrofo — tudo que a URL costuma transformar.
+ * Chave "frouxa": so letras e numeros, sem acento nem caixa.
+ *
+ * Os nomes em uso terminam em "ADV+", e o "+" e exatamente o caractere que
+ * numa query string significa espaco. Dependendo de como o Meta codifica o
+ * {{campaign.name}} e de como a Perfect Pay le a URL, o mesmo nome pode chegar
+ * como "ADV+", "ADV " ou "ADV%2B". Descartar a pontuacao faz os tres caírem na
+ * mesma chave, e o mesmo vale para as barras verticais, colchetes e apostrofos
+ * dos nomes.
  */
-function normalizeUtm(value: string): string {
+function fuzzyKey(value: string): string {
   let decoded = value;
   try {
-    decoded = decodeURIComponent(value.replace(/\+/g, ' '));
+    decoded = decodeURIComponent(value);
   } catch {
     // Percent-encoding malformado: segue com o texto cru.
   }
-  return normalize(decoded);
+
+  return decoded
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
 }
 
 interface CampaignTotals {
@@ -108,19 +109,32 @@ export async function GET(request: Request) {
     });
 
     // 2. Indice para casar o utm_campaign da venda com a campanha do Meta.
-    // Aceita tanto o id numerico quanto o nome, porque a URL do anuncio pode
-    // levar {{campaign.id}} ou {{campaign.name}}.
+    // Aceita o id numerico e o nome, porque a URL do anuncio pode levar
+    // {{campaign.id}} ou {{campaign.name}}.
     const byId = new Map<string, string>();
-    const byName = new Map<string, string>();
+    const byFuzzyName = new Map<string, string>();
+    const ambiguous = new Set<string>();
+
     Object.values(totals).forEach((item) => {
       byId.set(item.campaign_id, item.campaign_id);
-      byName.set(normalize(item.campaign_name), item.campaign_id);
+
+      const key = fuzzyKey(item.campaign_name);
+      // Duas campanhas que so diferem na pontuacao seriam indistinguiveis pela
+      // chave frouxa; nesse caso nenhuma das duas recebe atribuicao por nome.
+      if (byFuzzyName.has(key)) ambiguous.add(key);
+      byFuzzyName.set(key, item.campaign_id);
     });
 
     const matchCampaign = (utmCampaign: string): string | null => {
       const raw = utmCampaign.trim();
       if (!raw || raw === '-') return null;
-      return byId.get(raw) ?? byName.get(normalizeUtm(raw)) ?? null;
+
+      const byIdHit = byId.get(raw);
+      if (byIdHit) return byIdHit;
+
+      const key = fuzzyKey(raw);
+      if (!key || ambiguous.has(key)) return null;
+      return byFuzzyName.get(key) ?? null;
     };
 
     // 3. Atribui as vendas aprovadas da planilha.
