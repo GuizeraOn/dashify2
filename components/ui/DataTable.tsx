@@ -12,6 +12,12 @@ export interface Column<T> {
   render?: (value: any, row: T) => React.ReactNode;
   sortable?: boolean;
   align?: 'left' | 'center' | 'right';
+  /**
+   * Prende a coluna na borda esquerda durante a rolagem horizontal. Numa
+   * tabela larga, sem isso a pessoa rola ate o CPM e ja nao sabe de qual
+   * anuncio e a linha.
+   */
+  sticky?: boolean;
 }
 
 interface DataTableProps<T> {
@@ -73,9 +79,10 @@ export function DataTable<T>({ data, columns, defaultSortKey, defaultSortDesc = 
                 <th 
                   key={col.key} 
                   className={cn(
-                    "px-6 py-4 font-medium",
+                    "px-6 py-4 font-medium whitespace-nowrap",
                     col.align === 'right' && "text-right",
                     col.align === 'center' && "text-center",
+                    col.sticky && "sticky left-0 z-20 bg-[#242424]",
                     col.sortable !== false && "cursor-pointer hover:text-white transition-colors"
                   )}
                   onClick={() => col.sortable !== false && handleSort(col.key)}
@@ -109,7 +116,7 @@ export function DataTable<T>({ data, columns, defaultSortKey, defaultSortDesc = 
               </tr>
             ) : (
               paginatedData.map((row, i) => (
-                <tr key={i} className="border-b border-[#333] hover:bg-[#2a2a2a] transition-colors last:border-0">
+                <tr key={i} className="group border-b border-[#333] hover:bg-[#2a2a2a] transition-colors last:border-0">
                   {columns.map(col => {
                     const rawVal = col.accessor(row);
                     return (
@@ -118,7 +125,11 @@ export function DataTable<T>({ data, columns, defaultSortKey, defaultSortDesc = 
                         className={cn(
                           "px-6 py-4",
                           col.align === 'right' && "text-right",
-                          col.align === 'center' && "text-center"
+                          col.align === 'center' && "text-center",
+                          // A celula presa precisa de fundo proprio, senao o
+                          // resto da tabela passa por baixo dela; o hover vem
+                          // do group para a linha continuar acendendo inteira.
+                          col.sticky && "sticky left-0 z-10 bg-[#1E1E1E] transition-colors group-hover:bg-[#2a2a2a]"
                         )}
                       >
                         {col.render ? col.render(rawVal, row) : rawVal}

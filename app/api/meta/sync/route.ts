@@ -45,7 +45,10 @@ export async function POST() {
     
     const metricFields = [
       'spend', 'impressions', 'clicks', 'inline_link_clicks',
-      'ctr', 'cpc', 'cpm', 'actions', 'action_values', 'purchase_roas', 'date_start'
+      'ctr', 'cpc', 'cpm', 'actions', 'action_values', 'purchase_roas', 'date_start',
+      // Video: alimentam Hook Rate (3s / impressoes) e Hold Rate
+      // (ThruPlays / impressoes).
+      'video_play_actions', 'video_thruplay_watched_actions'
     ];
     
     const fields = dimFields.concat(metricFields).join(',');
@@ -87,6 +90,12 @@ export async function POST() {
         const initiateCk = pickAction(r.actions, ['initiate_checkout', 'omni_initiated_checkout', 'offsite_conversion.fb_pixel_initiate_checkout']);
         const lpv = pickAction(r.actions, ['landing_page_view']);
         
+        // "video_view" no array de actions e a reproducao de 3 segundos — e
+        // dela que sai o Hook Rate.
+        const video3s = pickAction(r.actions, ['video_view', 'omni_video_view']);
+        const thruplays = pickAction(r.video_thruplay_watched_actions, ['video_view']);
+        const postComments = pickAction(r.actions, ['comment', 'post_comment']);
+
         let roas = pickAction(r.purchase_roas, ['purchase', 'omni_purchase']);
         if (!roas && Number(r.spend)) roas = purchaseValue / Number(r.spend);
 
@@ -122,6 +131,9 @@ export async function POST() {
           purchase_value: purchaseValue,
           roas: roas,
           leads,
+          post_comments: postComments,
+          video_3s_views: video3s,
+          thruplays,
           currency: r.account_currency,
           updated_at: new Date().toISOString()
         });
@@ -132,11 +144,47 @@ export async function POST() {
 
     let purged = 0;
 
+    // Fica falso quando o banco ainda nao passou pela migracao das colunas
+    // novas; a resposta avisa, para o motivo de as metricas estarem vazias nao
+    // virar misterio.
+    let schemaComplete = true;
+
     if (rowsToUpsert.length > 0) {
-      // Upsert into Supabase
-      const { error } = await getSupabaseAdmin()
+      const NEW_COLUMNS = ['post_comments', 'video_3s_views', 'thruplays'];
+
+      let { error } = await getSupabaseAdmin()
         .from('meta_ads_insights')
         .upsert(rowsToUpsert, { onConflict: 'key' });
+
+      /**
+       * Rede de seguranca para a ordem da publicacao.
+       *
+       * A Vercel publica sozinha a cada push, e a migracao do banco e feita a
+       * mao — entao existe uma janela em que o codigo novo fala com a tabela
+       * antiga. Sem isto, o upsert inteiro falharia e o painel pararia de
+       * receber gasto por causa de tres colunas acessorias. Aqui ele regrava
+       * sem elas e segue funcionando.
+       */
+      // O PostgREST responde "Could not find the 'x' column of 'y' in the
+      // schema cache"; o Postgres cru diz 'column "x" does not exist'. Os dois
+      // formatos aparecem dependendo de onde a consulta para.
+      const isMissingColumn =
+        /could not find the .* column/i.test(error?.message || '') ||
+        /column .* does not exist/i.test(error?.message || '');
+
+      if (error && isMissingColumn) {
+        schemaComplete = false;
+
+        const legacyRows = rowsToUpsert.map((row) => {
+          const copy: Record<string, unknown> = { ...row };
+          NEW_COLUMNS.forEach((column) => delete copy[column]);
+          return copy;
+        });
+
+        ({ error } = await getSupabaseAdmin()
+          .from('meta_ads_insights')
+          .upsert(legacyRows, { onConflict: 'key' }));
+      }
 
       if (error) {
         throw new Error('Supabase Upsert Error: ' + error.message);
@@ -172,10 +220,94 @@ export async function POST() {
       }
     }
 
-    return NextResponse.json({ success: true, processed: rowsToUpsert.length, purged });
+    const reachRows = await syncDailyReach({ token, account, since, until });
+
+    return NextResponse.json({
+      success: true,
+      processed: rowsToUpsert.length,
+      purged,
+      reach_rows: reachRows,
+      schema_complete: schemaComplete,
+    });
 
   } catch (error: any) {
     console.error('Meta Sync Error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+/**
+ * Segunda consulta ao Meta, so para alcance e frequencia.
+ *
+ * Alcance conta pessoas, nao eventos: quem foi alcancado as 10h e as 15h e uma
+ * pessoa so. A consulta principal e quebrada por hora, entao somar o alcance
+ * dela contaria essa pessoa duas vezes — o alcance sairia quase igual as
+ * impressoes e a frequencia daria sempre 1,0. Esta consulta nao usa a quebra
+ * por hora, e por isso traz o alcance ja deduplicado dentro de cada dia.
+ *
+ * Nao derruba a sincronizacao se falhar: alcance e frequencia sao informacao
+ * de apoio, e o gasto — que move todo o resto do painel — ja esta gravado.
+ */
+async function syncDailyReach(params: {
+  token: string;
+  account: string;
+  since: string;
+  until: string;
+}): Promise<number> {
+  const { token, account, since, until } = params;
+
+  try {
+    const fields = [
+      'campaign_id', 'adset_id', 'ad_id',
+      'reach', 'frequency', 'impressions', 'date_start',
+    ].join(',');
+
+    const timeRange = encodeURIComponent(JSON.stringify({ since, until }));
+
+    let url: string | null =
+      `https://graph.facebook.com/${API_VERSION}/act_${account}/insights` +
+      `?level=${LEVEL}&time_increment=1&time_range=${timeRange}` +
+      `&fields=${fields}&limit=${ROW_LIMIT}&access_token=${encodeURIComponent(token)}`;
+
+    const rows: Record<string, unknown>[] = [];
+    let guard = 0;
+
+    while (url && guard < PAGE_GUARD) {
+      guard++;
+      const res: Response = await fetch(url);
+      const data: any = await res.json();
+
+      if (data.error) throw new Error(data.error.message);
+
+      for (const r of (data.data || [])) {
+        rows.push({
+          key: `${r.date_start}|${r.campaign_id}|${r.adset_id || ''}|${r.ad_id || ''}`,
+          date: r.date_start,
+          campaign_id: r.campaign_id || null,
+          adset_id: r.adset_id || null,
+          ad_id: r.ad_id || null,
+          reach: Number(r.reach) || 0,
+          frequency: Number(r.frequency) || 0,
+          impressions: Number(r.impressions) || 0,
+          updated_at: new Date().toISOString(),
+        });
+      }
+
+      url = (data.paging && data.paging.next) ? data.paging.next : null;
+    }
+
+    if (rows.length === 0) return 0;
+
+    const { error } = await getSupabaseAdmin()
+      .from('meta_ads_daily_reach')
+      .upsert(rows, { onConflict: 'key' });
+
+    // Tabela ainda nao criada (migracao pendente) cai aqui e e ignorada.
+    if (error) throw new Error(error.message);
+
+    return rows.length;
+  } catch (error: any) {
+    console.error('Meta reach sync skipped:', error.message);
+    return 0;
   }
 }

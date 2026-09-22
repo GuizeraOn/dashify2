@@ -24,7 +24,19 @@ export default function CampanhasPage() {
 
   const [level, setLevel] = useState<CampaignLevel>('campaign');
 
-  const { data, isLoading, isError } = useCampaigns({ period, level });
+  const { data, isLoading, isError, isFetching } = useCampaigns({ period, level });
+
+  /**
+   * O nivel que a tabela esta mostrando e o da RESPOSTA, nao o do clique.
+   *
+   * Enquanto a consulta nova nao chega, os dados na tela ainda sao os do nivel
+   * anterior. Se os cabecalhos seguissem o clique, por alguns segundos a
+   * tabela diria "Anuncio" com as linhas das campanhas — numeros certos sob um
+   * rotulo errado, que e pior do que esperar. O botao aceso segue o clique,
+   * para o toque ter resposta imediata.
+   */
+  const shownLevel = data?.level ?? level;
+  const isSwitchingLevel = isFetching && shownLevel !== level;
 
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
@@ -35,7 +47,7 @@ export default function CampanhasPage() {
   const formatInt = (val: number) => new Intl.NumberFormat('pt-BR').format(val);
   const formatPercent = (val: number) => `${val.toFixed(2)}%`;
 
-  const current = LEVEL_OPTIONS.find((option) => option.value === level)!;
+  const current = LEVEL_OPTIONS.find((option) => option.value === shownLevel)!;
 
   /**
    * O pai vai embaixo do nome, e nao numa coluna propria: nomes de conjunto e
@@ -43,8 +55,8 @@ export default function CampanhasPage() {
    * para fora da tela.
    */
   const parentLine = (row: CampaignRow) => {
-    if (level === 'campaign') return null;
-    if (level === 'adset') return row.campaign_name;
+    if (shownLevel === 'campaign') return null;
+    if (shownLevel === 'adset') return row.campaign_name;
     // No nivel de anuncio a linha de apoio mostra so o conjunto: o nome da
     // campanha e longo e quase sempre o mesmo, e ocuparia o espaco inteiro
     // justamente antes da parte que distingue uma linha da outra. O caminho
@@ -53,16 +65,27 @@ export default function CampanhasPage() {
   };
 
   const parentTitle = (row: CampaignRow) => {
-    if (level === 'campaign') return undefined;
-    if (level === 'adset') return row.campaign_name;
+    if (shownLevel === 'campaign') return undefined;
+    if (shownLevel === 'adset') return row.campaign_name;
     return [row.campaign_name, row.adset_name].filter(Boolean).join(' › ');
   };
 
+  /** Numero opcional: "—" quando nao ha denominador para a conta. */
+  const optional = (value: number | null, format: (v: number) => string) =>
+    value === null ? <span className="text-gray-600">—</span> : format(value);
+
+  /**
+   * A ordem daqui para baixo e a mesma do gerenciador de anuncios, para a
+   * leitura ser a mesma nos dois lugares. As colunas da planilha — venda de
+   * verdade, faturamento, CPA, lucro — ficam agrupadas no fim, porque nao
+   * existem no Meta e sao o motivo de este painel existir.
+   */
   const columns: Column<CampaignRow>[] = [
     {
       key: 'name',
       header: current.label.replace(/s$/, ''),
       accessor: r => r.name,
+      sticky: true,
       // A largura minima existe porque a tabela distribui espaco sozinha: sem
       // ela, "AD 35 (VIDEO)" quebra em tres linhas para as colunas de numero
       // caberem, e cada linha da tabela vira um paragrafo. O caminho do pai
@@ -80,10 +103,17 @@ export default function CampanhasPage() {
       )
     },
     {
-      key: 'spend',
-      header: 'Gasto',
-      accessor: r => r.spend,
-      render: (v) => formatCurrency(v),
+      key: 'meta_purchases',
+      header: 'Resultados',
+      accessor: r => r.meta_purchases,
+      render: (v) => formatInt(v),
+      align: 'right'
+    },
+    {
+      key: 'cost_per_result',
+      header: 'Custo/result.',
+      accessor: r => r.cost_per_result ?? Infinity,
+      render: (_v, row) => optional(row.cost_per_result, formatCurrency),
       align: 'right'
     },
     {
@@ -94,10 +124,73 @@ export default function CampanhasPage() {
       align: 'right'
     },
     {
+      key: 'post_comments',
+      header: 'Coment.',
+      accessor: r => r.post_comments ?? -1,
+      render: (_v, row) => optional(row.post_comments, formatInt),
+      align: 'right'
+    },
+    {
+      key: 'reach',
+      header: 'Alcance',
+      accessor: r => r.reach,
+      render: (v) => (v > 0 ? formatInt(v) : <span className="text-gray-600">—</span>),
+      align: 'right'
+    },
+    {
+      key: 'hook_rate',
+      header: 'Hook Rate',
+      accessor: r => r.hook_rate ?? -1,
+      render: (_v, row) => optional(row.hook_rate, formatPercent),
+      align: 'right'
+    },
+    {
+      key: 'hold_rate',
+      header: 'Hold Rate',
+      accessor: r => r.hold_rate ?? -1,
+      render: (_v, row) => optional(row.hold_rate, formatPercent),
+      align: 'right'
+    },
+    {
+      key: 'frequency',
+      header: 'Frequência',
+      accessor: r => r.frequency ?? -1,
+      render: (_v, row) => optional(row.frequency, formatNumber),
+      align: 'right'
+    },
+    {
+      key: 'spend',
+      header: 'Valor gasto',
+      accessor: r => r.spend,
+      render: (v) => formatCurrency(v),
+      align: 'right'
+    },
+    {
+      key: 'cpm',
+      header: 'CPM',
+      accessor: r => r.cpm,
+      render: (v) => formatCurrency(v),
+      align: 'right'
+    },
+    {
       key: 'link_clicks',
-      header: 'Cliques',
+      header: 'Cliques no link',
       accessor: r => r.link_clicks,
       render: (v) => formatInt(v),
+      align: 'right'
+    },
+    {
+      key: 'landing_page_views',
+      header: 'Vis. Página',
+      accessor: r => r.landing_page_views,
+      render: (v) => formatInt(v),
+      align: 'right'
+    },
+    {
+      key: 'lpv_rate',
+      header: 'Connect Rate',
+      accessor: r => r.lpv_rate,
+      render: (v) => formatPercent(v),
       align: 'right'
     },
     {
@@ -115,19 +208,42 @@ export default function CampanhasPage() {
       align: 'right'
     },
     {
-      key: 'landing_page_views',
-      header: 'Vis. Página',
-      accessor: r => r.landing_page_views,
-      render: (v) => formatInt(v),
-      align: 'right'
-    },
-    {
       key: 'initiate_checkout',
       header: 'ICs',
       accessor: r => r.initiate_checkout,
       render: (v) => formatInt(v),
       align: 'right'
     },
+    {
+      key: 'cost_per_ic',
+      header: 'Custo/IC',
+      accessor: r => r.cost_per_ic ?? Infinity,
+      render: (_v, row) => optional(row.cost_per_ic, formatCurrency),
+      align: 'right'
+    },
+    {
+      key: 'meta_roas',
+      header: 'ROAS compras',
+      accessor: r => r.meta_roas ?? 0,
+      render: (_v, row) => optional(row.meta_roas, formatNumber),
+      align: 'right'
+    },
+    {
+      key: 'checkout_conversion',
+      header: 'CHK CONV.',
+      accessor: r => r.checkout_conversion ?? -1,
+      render: (_v, row) => optional(row.checkout_conversion, formatPercent),
+      align: 'right'
+    },
+    {
+      key: 'meta_purchase_value',
+      header: 'Valor conv.',
+      accessor: r => r.meta_purchase_value,
+      render: (v) => formatCurrency(v),
+      align: 'right'
+    },
+
+    // --- Daqui para baixo, o que so este painel tem: a venda da planilha. ---
     {
       key: 'sales',
       header: 'Vendas',
@@ -146,14 +262,14 @@ export default function CampanhasPage() {
       key: 'cpa',
       header: 'CPA',
       accessor: r => r.cpa ?? Infinity,
-      render: (_v, row) => (row.cpa === null ? <span className="text-gray-600">—</span> : formatCurrency(row.cpa)),
+      render: (_v, row) => optional(row.cpa, formatCurrency),
       align: 'right'
     },
     {
       key: 'roas',
-      header: 'ROAS',
+      header: 'ROAS real',
       accessor: r => r.roas ?? 0,
-      render: (_v, row) => (row.roas === null ? <span className="text-gray-600">—</span> : formatNumber(row.roas)),
+      render: (_v, row) => optional(row.roas, formatNumber),
       align: 'right'
     },
     {
@@ -220,12 +336,16 @@ export default function CampanhasPage() {
         </div>
       </div>
 
-      <DataTable
-        key={level}
-        data={data?.rows || []}
-        columns={columns}
-        defaultSortKey="spend"
-      />
+      {/* Esmaece enquanto o nivel novo nao chega, para a troca nao parecer
+          travada nem os numeros antigos parecerem os novos. */}
+      <div className={cn('transition-opacity', isSwitchingLevel && 'opacity-50')}>
+        <DataTable
+          key={shownLevel}
+          data={data?.rows || []}
+          columns={columns}
+          defaultSortKey="spend"
+        />
+      </div>
 
       <div className="mt-4 flex flex-col gap-1.5">
         {/* Venda aprovada que nao casou com nada neste nivel: trafego organico,
@@ -236,7 +356,7 @@ export default function CampanhasPage() {
           <p className="text-xs text-gray-500">
             {formatInt(data.unattributed.sales)} venda{data.unattributed.sales === 1 ? '' : 's'} aprovada
             {data.unattributed.sales === 1 ? '' : 's'} ({formatCurrency(data.unattributed.revenue)}) sem
-            {level === 'campaign' ? ' campanha' : level === 'adset' ? ' conjunto' : ' anúncio'} identificado —
+            {shownLevel === 'campaign' ? ' campanha' : shownLevel === 'adset' ? ' conjunto' : ' anúncio'} identificado —
             sem <code className="text-gray-400">{current.utm}</code> na URL do anúncio, ou vindas de
             outra origem.
           </p>

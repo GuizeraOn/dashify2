@@ -33,6 +33,10 @@ export interface MetaInsightRow extends MetaRow {
   landing_page_views: number;
   initiate_checkout: number;
   leads: number;
+  /** Colunas da migracao supabase_migration_colunas_meta.sql. */
+  post_comments: number | null;
+  video_3s_views: number | null;
+  thruplays: number | null;
   currency: string | null;
   [key: string]: unknown;
 }
@@ -62,6 +66,57 @@ export async function fetchMetaInsights(
     rows.push(...batch);
 
     if (batch.length < PAGE_SIZE) break;
+  }
+
+  return rows;
+}
+
+/** Uma linha de alcance diario, ja deduplicado dentro do dia pelo Meta. */
+export interface MetaReachRow {
+  date: string;
+  campaign_id: string | null;
+  adset_id: string | null;
+  ad_id: string | null;
+  reach: number | null;
+  frequency: number | null;
+  impressions: number | null;
+}
+
+/**
+ * Alcance e frequencia, da tabela a parte (ver syncDailyReach).
+ *
+ * Devolve vazio se a tabela ainda nao existe: a migracao e feita a mao, e ate
+ * ela acontecer as duas colunas ficam em branco na tela em vez de derrubar a
+ * pagina inteira.
+ */
+export async function fetchMetaDailyReach(
+  dateStart?: string,
+  dateEnd?: string
+): Promise<MetaReachRow[]> {
+  const rows: MetaReachRow[] = [];
+
+  try {
+    for (let page = 0; page < MAX_PAGES; page++) {
+      let query = getSupabaseAdmin()
+        .from('meta_ads_daily_reach')
+        .select('*')
+        .order('key', { ascending: true })
+        .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+
+      if (dateStart) query = query.gte('date', dateStart);
+      if (dateEnd) query = query.lte('date', dateEnd);
+
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+
+      const batch = (data || []) as MetaReachRow[];
+      rows.push(...batch);
+
+      if (batch.length < PAGE_SIZE) break;
+    }
+  } catch (error: any) {
+    console.error('Reach table unavailable:', error.message);
+    return [];
   }
 
   return rows;
