@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     const [metaResult, vendasResponse, settingsResult] = await Promise.all([
       metaQuery,
-      sheets.spreadsheets.values.get({ spreadsheetId, range: 'db_vendas!A:S' }),
+      sheets.spreadsheets.values.get({ spreadsheetId, range: 'db_vendas!A:W' }),
       getSupabaseAdmin().from('app_settings').select('value').eq('key', 'front_products').single()
     ]);
 

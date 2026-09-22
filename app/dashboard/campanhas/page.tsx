@@ -17,6 +17,9 @@ export default function CampanhasPage() {
   const formatNumber = (val: number) => 
     new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
 
+  const formatInt = (val: number) => new Intl.NumberFormat('pt-BR').format(val);
+  const formatPercent = (val: number) => `${val.toFixed(2)}%`;
+
   const columns: Column<CampaignRow>[] = [
     {
       key: 'campaign_name',
@@ -32,36 +35,88 @@ export default function CampanhasPage() {
       align: 'right'
     },
     {
-      key: 'purchases',
-      header: 'Compras',
-      accessor: r => r.purchases,
+      key: 'impressions',
+      header: 'Impressões',
+      accessor: r => r.impressions,
+      render: (v) => formatInt(v),
+      align: 'right'
+    },
+    {
+      key: 'link_clicks',
+      header: 'Cliques',
+      accessor: r => r.link_clicks,
+      render: (v) => formatInt(v),
+      align: 'right'
+    },
+    {
+      key: 'ctr',
+      header: 'CTR',
+      accessor: r => r.ctr,
+      render: (v) => formatPercent(v),
+      align: 'right'
+    },
+    {
+      key: 'cpc',
+      header: 'CPC',
+      accessor: r => r.cpc,
+      render: (v) => formatCurrency(v),
+      align: 'right'
+    },
+    {
+      key: 'landing_page_views',
+      header: 'Vis. Página',
+      accessor: r => r.landing_page_views,
+      render: (v) => formatInt(v),
+      align: 'right'
+    },
+    {
+      key: 'initiate_checkout',
+      header: 'ICs',
+      accessor: r => r.initiate_checkout,
+      render: (v) => formatInt(v),
+      align: 'right'
+    },
+    {
+      key: 'sales',
+      header: 'Vendas',
+      accessor: r => r.sales,
+      render: (v) => formatInt(v),
       align: 'center'
     },
     {
-      key: 'purchase_value',
+      key: 'revenue',
       header: 'Faturamento',
-      accessor: r => r.purchase_value,
+      accessor: r => r.revenue,
       render: (v) => formatCurrency(v),
       align: 'right'
     },
     {
       key: 'cpa',
       header: 'CPA',
-      accessor: r => r.cpa,
-      render: (v) => formatCurrency(v),
+      accessor: r => r.cpa ?? Infinity,
+      render: (_v, row) => (row.cpa === null ? <span className="text-gray-600">—</span> : formatCurrency(row.cpa)),
       align: 'right'
     },
     {
       key: 'roas',
       header: 'ROAS',
-      accessor: r => r.roas,
-      render: (v) => formatNumber(v),
+      accessor: r => r.roas ?? 0,
+      render: (_v, row) => (row.roas === null ? <span className="text-gray-600">—</span> : formatNumber(row.roas)),
+      align: 'right'
+    },
+    {
+      key: 'profit',
+      header: 'Lucro',
+      accessor: r => r.profit,
+      render: (v) => (
+        <span className={v >= 0 ? 'text-green-500' : 'text-red-500'}>{formatCurrency(v)}</span>
+      ),
       align: 'right'
     },
     {
       key: 'status',
       header: 'Performance',
-      accessor: r => r.roas,
+      accessor: r => r.roas ?? 0,
       render: (v) => <PerformanceBadge roas={v} />,
       align: 'center'
     }
@@ -88,7 +143,10 @@ export default function CampanhasPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white mb-1">Campanhas</h1>
-          <p className="text-sm text-gray-400">Análise de performance por campanha no Meta Ads.</p>
+          <p className="text-sm text-gray-400">
+            Gasto e entrega vêm do Meta Ads; vendas e faturamento vêm da planilha,
+            casados por <code className="text-gray-500">utm_campaign</code>.
+          </p>
         </div>
       </div>
       
@@ -97,6 +155,18 @@ export default function CampanhasPage() {
         columns={columns} 
         defaultSortKey="spend" 
       />
+
+      {/* Venda aprovada que nao casou com nenhuma campanha: trafego organico,
+          outra fonte, ou anuncio sem utm_campaign na URL. Fica visivel para a
+          soma da tabela nunca parecer o faturamento total por engano. */}
+      {data?.unattributed && data.unattributed.sales > 0 && (
+        <p className="mt-4 text-xs text-gray-500">
+          {formatInt(data.unattributed.sales)} venda{data.unattributed.sales === 1 ? '' : 's'} aprovada
+          {data.unattributed.sales === 1 ? '' : 's'} ({formatCurrency(data.unattributed.revenue)}) sem
+          campanha identificada — sem <code className="text-gray-400">utm_campaign</code> na URL do
+          anúncio, ou vindas de outra origem.
+        </p>
+      )}
     </div>
   );
 }

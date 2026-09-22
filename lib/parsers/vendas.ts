@@ -1,4 +1,4 @@
-import { VendasRow } from '../types';
+import type { VendasRow } from '../types';
 
 /**
  * Nome canonico de cada pais, em portugues.
@@ -66,20 +66,43 @@ export function parseVendas(rows: any[][]): VendasRow[] {
     headerMap[h] = i;
   });
 
+  /**
+   * A planilha devolve valores ja formatados: "R$ 91,70", "$17,94",
+   * "R$ 310.901,66". A versao anterior trocava apenas a primeira virgula por
+   * ponto, entao "R$ 1.234,56" virava "1.234.56" e o parseFloat parava no
+   * primeiro ponto: R$ 1.234,56 era lido como 1,23. Qualquer venda de quatro
+   * digitos para cima entrava no painel dividida por mil.
+   */
   const parseFloatSafe = (val: any) => {
-    if (!val) return 0;
-    // Remove R$, $, spaces, and replace comma with dot
-    let str = String(val).replace(/[R\$\s]/gi, '');
-    str = str.replace(',', '.');
+    if (val === null || val === undefined || val === '') return 0;
+    if (typeof val === 'number') return Number.isFinite(val) ? val : 0;
+
+    // Fora simbolo de moeda, espaco e qualquer letra.
+    let str = String(val).replace(/[^\d,.-]/g, '');
+
+    // Havendo virgula, o formato e pt-BR: ponto separa milhar, virgula decimal.
+    // Sem virgula, o ponto ja e o separador decimal.
+    if (str.includes(',')) {
+      str = str.replace(/\./g, '').replace(',', '.');
+    }
+
     const num = parseFloat(str);
-    return isNaN(num) ? 0 : num;
+    return Number.isFinite(num) ? num : 0;
   };
 
-  const getValue = (row: any[], keys: string[]) => {
+  /**
+   * Procura a coluna pelo nome do cabecalho. `fallbackIndex` cobre colunas que
+   * o script de captura ja preenche mas que ainda nao ganharam titulo na
+   * linha 1 — caso das colunas de UTM.
+   */
+  const getValue = (row: any[], keys: string[], fallbackIndex?: number) => {
     for (const key of keys) {
       if (headerMap[key] !== undefined) {
         return row[headerMap[key]];
       }
+    }
+    if (fallbackIndex !== undefined && row.length > fallbackIndex) {
+      return row[fallbackIndex];
     }
     return '';
   };
@@ -106,14 +129,25 @@ export function parseVendas(rows: any[][]): VendasRow[] {
       cliente: String(getValue(row, ['cliente', 'customer'])),
       produto: String(getValue(row, ['produto', 'product'])),
       funnel_step: String(getValue(row, ['etapa do funil', 'funnel'])),
-      gross_value_usd: parseFloatSafe(getValue(row, ['valor bruto usd'])),
-      net_value_usd: parseFloatSafe(getValue(row, ['valor líquido usd'])),
+      // A planilha nomeia estas colunas como "Faturamento Bruto (USD)". Os
+      // apelidos antigos ('valor bruto usd') nunca casavam, entao os dois
+      // campos chegavam sempre zerados.
+      gross_value_usd: parseFloatSafe(
+        getValue(row, ['faturamento bruto (usd)', 'faturamento bruto (moeda original)', 'valor bruto usd'])
+      ),
+      net_value_usd: parseFloatSafe(
+        getValue(row, ['faturamento líquido (usd)', 'faturamento líquido (moeda original)', 'valor líquido usd'])
+      ),
       gross_revenue_brl: parseFloatSafe(getValue(row, ['faturamento bruto r$'])),
       net_revenue_brl: parseFloatSafe(getValue(row, ['faturamento líquido r$'])),
       country: normalizeCountry(String(getValue(row, ['país', 'country']))),
       payment_method: String(getValue(row, ['meio de pagamento', 'payment method'])).toLowerCase().trim(),
       status: String(getValue(row, ['status'])),
-      utm_source: String(getValue(row, ['origem / utm', 'utm_source'])),
+      utm_source: String(getValue(row, ['utm_source', 'origem / utm', 'origem principal (source/src)'], 15)),
+      utm_campaign: String(getValue(row, ['utm campaign', 'utm_campaign'], 19)),
+      utm_medium: String(getValue(row, ['utm medium', 'utm_medium'], 20)),
+      utm_content: String(getValue(row, ['utm content', 'utm_content'], 21)),
+      utm_term: String(getValue(row, ['utm term', 'utm_term'], 22)),
       phone: phone,
     };
   });

@@ -29,6 +29,11 @@ export interface VendasRow {
   payment_method: string;
   status: string;
   utm_source: string;
+  /** Colunas T..W do script de captura. Vazias em vendas anteriores a ele. */
+  utm_campaign: string;
+  utm_medium: string;
+  utm_content: string;
+  utm_term: string;
   phone: string;
 }
 
