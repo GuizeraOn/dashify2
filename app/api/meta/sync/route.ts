@@ -21,7 +21,19 @@ const ROW_LIMIT = 500;
  * se o Meta devolver um cursor circular.
  */
 const PAGE_GUARD = 60;
-const BREAKDOWN = 'hourly_stats_aggregated_by_advertiser_time_zone';
+
+/**
+ * A consulta era quebrada por hora. Deixou de ser, por dois motivos:
+ *
+ * 1. Ninguem lia a hora. A coluna existia na tabela, mas o unico mapa de calor
+ *    do painel e montado a partir da planilha de vendas, nao daqui. O preco
+ *    disso era 24 vezes mais linhas — 3.061 em vez de 128 — o que multiplicava
+ *    as paginas pedidas ao Meta, o tamanho da gravacao e a leitura de toda
+ *    consulta do painel.
+ *
+ * 2. O Meta nao devolve `video_thruplay_watched_actions` junto com essa quebra.
+ *    Era por isso que o Hold Rate dava 0% em todos os anuncios.
+ */
 
 export async function POST() {
   try {
@@ -55,8 +67,16 @@ export async function POST() {
     const timeRange = encodeURIComponent(JSON.stringify({ since, until }));
 
     let url: string | null = `https://graph.facebook.com/${API_VERSION}/act_${account}/insights` +
-      `?level=${LEVEL}&time_increment=1&breakdowns=${BREAKDOWN}&time_range=${timeRange}` +
+      `?level=${LEVEL}&time_increment=1&time_range=${timeRange}` +
       `&fields=${fields}&limit=${ROW_LIMIT}&access_token=${encodeURIComponent(token)}`;
+
+    // Carimbo unico da execucao: e ele que separa o que esta atualizado do que
+    // sobrou de um formato antigo (ver a faxina depois da gravacao).
+    const runStamp = new Date().toISOString();
+
+    // Dispara ja: as consultas de alcance sao independentes do laco abaixo e
+    // rodam enquanto ele pagina.
+    const reachPromise = syncDailyReach({ token, account, since, until });
 
     const rowsToUpsert = [];
     let guard = 0;
@@ -81,9 +101,6 @@ export async function POST() {
       }
 
       for (const r of (data.data || [])) {
-        const hourLabel = r[BREAKDOWN] || '';
-        const hour = hourLabel ? parseInt(hourLabel.substring(0, 2), 10) : null;
-
         const purchases = pickAction(r.actions, ['purchase', 'omni_purchase', 'offsite_conversion.fb_pixel_purchase']);
         const purchaseValue = pickAction(r.action_values, ['purchase', 'omni_purchase', 'offsite_conversion.fb_pixel_purchase']);
         const leads = pickAction(r.actions, ['lead', 'offsite_conversion.fb_pixel_lead', 'onsite_conversion.lead_grouped']);
@@ -102,14 +119,12 @@ export async function POST() {
         const adsetId = (LEVEL === 'adset' || LEVEL === 'ad') ? r.adset_id : null;
         const adId = (LEVEL === 'ad') ? r.ad_id : null;
 
-        let key = `${r.date_start}|${hour}|${r.campaign_id}`;
-        if (adsetId) key += `|${adsetId}`;
-        if (adId) key += `|${adId}`;
+        const key = `${r.date_start}|${r.campaign_id}|${adsetId || ''}|${adId || ''}`;
 
         rowsToUpsert.push({
           key,
           date: r.date_start,
-          hour: hour,
+          hour: null,
           account_id: r.account_id,
           account_name: r.account_name,
           campaign_id: r.campaign_id,
@@ -135,7 +150,7 @@ export async function POST() {
           video_3s_views: video3s,
           thruplays,
           currency: r.account_currency,
-          updated_at: new Date().toISOString()
+          updated_at: runStamp
         });
       }
 
@@ -191,26 +206,30 @@ export async function POST() {
       }
 
       /**
-       * Faxina das linhas antigas, de quando a sincronizacao era por campanha.
+       * Faxina do que sobrou de formatos antigos.
        *
-       * A chave delas e `data|hora|campanha`; a das novas inclui conjunto e
-       * anuncio. Sao chaves diferentes, entao o upsert nao substitui: as duas
-       * versoes do mesmo dia conviveriam na tabela e qualquer soma de gasto
-       * contaria o mesmo dinheiro duas vezes.
+       * A chave ja mudou duas vezes: era `data|hora|campanha`, virou
+       * `data|hora|campanha|conjunto|anuncio` e agora e
+       * `data|campanha|conjunto|anuncio`. Chave diferente quer dizer que o
+       * upsert nao substitui — as versoes antigas ficariam na tabela ao lado
+       * das novas, e qualquer soma de gasto contaria o mesmo dinheiro duas ou
+       * tres vezes.
        *
-       * So apaga o que esta dentro da janela recem-gravada, e so se a paginacao
-       * terminou — se o Meta ficou devendo pagina, o que veio pode estar
-       * incompleto e o antigo ainda e a melhor informacao que temos. Dias
-       * anteriores a virada continuam intactos: la a linha por campanha e a
-       * unica que existe, e e melhor um gasto sem quebra do que gasto nenhum.
+       * Em vez de perseguir cada formato, apaga o que nao foi tocado por esta
+       * execucao: dentro da janela recem-gravada, o que tem carimbo anterior
+       * ao desta rodada e sobra, por definicao.
+       *
+       * So roda se a paginacao terminou. Se o Meta ficou devendo pagina, o que
+       * veio pode estar incompleto e o antigo ainda e a melhor informacao que
+       * temos. Dias anteriores a janela ficam intactos.
        */
       if (!url) {
         const { count, error: purgeError } = await getSupabaseAdmin()
           .from('meta_ads_insights')
           .delete({ count: 'exact' })
-          .is('ad_id', null)
           .gte('date', since)
-          .lte('date', until);
+          .lte('date', until)
+          .or(`updated_at.is.null,updated_at.lt.${runStamp}`);
 
         if (purgeError) {
           throw new Error('Supabase Purge Error: ' + purgeError.message);
@@ -220,7 +239,7 @@ export async function POST() {
       }
     }
 
-    const reachRows = await syncDailyReach({ token, account, since, until });
+    const reachRows = await reachPromise;
 
     return NextResponse.json({
       success: true,
@@ -237,16 +256,20 @@ export async function POST() {
 }
 
 /**
- * Segunda consulta ao Meta, so para alcance e frequencia.
+ * Consulta separada para alcance e frequencia, nos tres niveis.
  *
- * Alcance conta pessoas, nao eventos: quem foi alcancado as 10h e as 15h e uma
- * pessoa so. A consulta principal e quebrada por hora, entao somar o alcance
- * dela contaria essa pessoa duas vezes — o alcance sairia quase igual as
- * impressoes e a frequencia daria sempre 1,0. Esta consulta nao usa a quebra
- * por hora, e por isso traz o alcance ja deduplicado dentro de cada dia.
+ * Alcance conta PESSOAS, nao eventos — e por isso nao pode ser somado de baixo
+ * para cima. Quem viu dois anuncios do mesmo conjunto e uma pessoa so: somar o
+ * alcance dos anuncios daria um numero maior que o alcance real do conjunto.
+ * Nao ha como deduplicar isso do nosso lado, entao cada nivel e pedido ao Meta
+ * ja deduplicado.
  *
- * Nao derruba a sincronizacao se falhar: alcance e frequencia sao informacao
- * de apoio, e o gasto — que move todo o resto do painel — ja esta gravado.
+ * As tres consultas saem juntas, e a tabela distingue os niveis pelas colunas
+ * vazias: linha de campanha nao tem conjunto nem anuncio, linha de conjunto
+ * nao tem anuncio.
+ *
+ * Nao derruba a sincronizacao se falhar: alcance e informacao de apoio, e o
+ * gasto — que move todo o resto do painel — ja esta gravado.
  */
 async function syncDailyReach(params: {
   token: string;
@@ -257,45 +280,59 @@ async function syncDailyReach(params: {
   const { token, account, since, until } = params;
 
   try {
-    const fields = [
-      'campaign_id', 'adset_id', 'ad_id',
-      'reach', 'frequency', 'impressions', 'date_start',
-    ].join(',');
-
     const timeRange = encodeURIComponent(JSON.stringify({ since, until }));
 
-    let url: string | null =
-      `https://graph.facebook.com/${API_VERSION}/act_${account}/insights` +
-      `?level=${LEVEL}&time_increment=1&time_range=${timeRange}` +
-      `&fields=${fields}&limit=${ROW_LIMIT}&access_token=${encodeURIComponent(token)}`;
+    const fetchLevel = async (level: 'campaign' | 'adset' | 'ad') => {
+      const fields = ['campaign_id', 'reach', 'frequency', 'impressions', 'date_start'];
+      if (level === 'adset' || level === 'ad') fields.push('adset_id');
+      if (level === 'ad') fields.push('ad_id');
 
-    const rows: Record<string, unknown>[] = [];
-    let guard = 0;
+      const rows: Record<string, unknown>[] = [];
 
-    while (url && guard < PAGE_GUARD) {
-      guard++;
-      const res: Response = await fetch(url);
-      const data: any = await res.json();
+      let url: string | null =
+        `https://graph.facebook.com/${API_VERSION}/act_${account}/insights` +
+        `?level=${level}&time_increment=1&time_range=${timeRange}` +
+        `&fields=${fields.join(',')}&limit=${ROW_LIMIT}&access_token=${encodeURIComponent(token)}`;
 
-      if (data.error) throw new Error(data.error.message);
+      let guard = 0;
 
-      for (const r of (data.data || [])) {
-        rows.push({
-          key: `${r.date_start}|${r.campaign_id}|${r.adset_id || ''}|${r.ad_id || ''}`,
-          date: r.date_start,
-          campaign_id: r.campaign_id || null,
-          adset_id: r.adset_id || null,
-          ad_id: r.ad_id || null,
-          reach: Number(r.reach) || 0,
-          frequency: Number(r.frequency) || 0,
-          impressions: Number(r.impressions) || 0,
-          updated_at: new Date().toISOString(),
-        });
+      while (url && guard < PAGE_GUARD) {
+        guard++;
+        const res: Response = await fetch(url);
+        const data: any = await res.json();
+
+        if (data.error) throw new Error(data.error.message);
+
+        for (const r of (data.data || [])) {
+          const adsetId = r.adset_id || null;
+          const adId = r.ad_id || null;
+
+          rows.push({
+            key: `${r.date_start}|${r.campaign_id}|${adsetId || ''}|${adId || ''}`,
+            date: r.date_start,
+            campaign_id: r.campaign_id || null,
+            adset_id: adsetId,
+            ad_id: adId,
+            reach: Number(r.reach) || 0,
+            frequency: Number(r.frequency) || 0,
+            impressions: Number(r.impressions) || 0,
+            updated_at: new Date().toISOString(),
+          });
+        }
+
+        url = (data.paging && data.paging.next) ? data.paging.next : null;
       }
 
-      url = (data.paging && data.paging.next) ? data.paging.next : null;
-    }
+      return rows;
+    };
 
+    const batches = await Promise.all([
+      fetchLevel('campaign'),
+      fetchLevel('adset'),
+      fetchLevel('ad'),
+    ]);
+
+    const rows = batches.flat();
     if (rows.length === 0) return 0;
 
     const { error } = await getSupabaseAdmin()
