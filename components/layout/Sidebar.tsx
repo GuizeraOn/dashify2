@@ -7,7 +7,7 @@ const links = [
   { name: 'Dashboard',   href: '/dashboard',              icon: LayoutDashboard },
   { name: 'Meta Ads',    href: '#',                       icon: Target },
   { name: 'Campanhas',   href: '/dashboard/campanhas',    icon: Megaphone },
-  { name: 'Produtos',    href: '#',                       icon: ShoppingBag },
+  { name: 'Produtos',    href: '/dashboard/produtos',     icon: ShoppingBag },
   { name: 'Vendas',      href: '/dashboard/vendas',       icon: FileText },
   { name: 'Relatórios',  href: '/dashboard/relatorios',   icon: BarChart2 },
 ];
