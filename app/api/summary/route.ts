@@ -176,6 +176,53 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.revenue - a.revenue);
 
+    /**
+     * Aprovacao por pais.
+     *
+     * Usa a base anterior ao filtro de pais, como o card de vendas por pais:
+     * filtrar para o Chile e depois listar "aprovacao por pais" devolveria uma
+     * linha so, que nao responde nada.
+     *
+     * O denominador sao as tentativas RESOLVIDAS. Boleto e Pix que ainda nao
+     * foram pagos ("Pendente", "Aguardando Pagamento") nao sao recusa — sao
+     * uma decisao que ainda nao aconteceu, e conta-los como reprovacao
+     * afundaria a taxa dos paises que usam mais esses meios.
+     *
+     * Reembolsado conta como aprovado: a compra passou no checkout, que e o
+     * que esta sendo medido aqui. O estorno veio depois, e ja tem card proprio.
+     */
+    const APPROVED_STATUSES = ['aprovado', 'reembolsado'];
+    const REFUSED_STATUSES = ['cancelado', 'recusado', 'estornado'];
+
+    const approvalTotals: Record<string, { approved: number; refused: number }> = {};
+
+    vendasBeforeCountryFilter.forEach(row => {
+      const status = row.status.toLowerCase().trim();
+
+      const isApproved = APPROVED_STATUSES.includes(status);
+      const isRefused = REFUSED_STATUSES.includes(status);
+      if (!isApproved && !isRefused) return;
+
+      const name = row.country || 'Desconhecido';
+      if (!approvalTotals[name]) approvalTotals[name] = { approved: 0, refused: 0 };
+
+      if (isApproved) approvalTotals[name].approved += 1;
+      else approvalTotals[name].refused += 1;
+    });
+
+    const country_approval_stats = Object.entries(approvalTotals)
+      .map(([name, totals]) => {
+        const resolved = totals.approved + totals.refused;
+        return {
+          country: name,
+          approved: totals.approved,
+          refused: totals.refused,
+          resolved,
+          approval_rate: resolved > 0 ? (totals.approved / resolved) * 100 : 0,
+        };
+      })
+      .sort((a, b) => b.approval_rate - a.approval_rate);
+
     // Vendas por dia da semana. Respeita os filtros ativos, inclusive o de
     // pais: a pergunta aqui e "em que dia este recorte vende", e nao existe
     // etapa global como no funil.
@@ -214,6 +261,7 @@ export async function GET(request: NextRequest) {
       card_approval_stats,
       funnel_stats,
       country_stats,
+      country_approval_stats,
       weekday_stats,
       available_products
     });

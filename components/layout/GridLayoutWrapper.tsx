@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, isValidElement } from 'react';
+import { SlidersHorizontal } from 'lucide-react';
 import { Responsive } from 'react-grid-layout';
 import { WidthProvider } from 'react-grid-layout/legacy';
 import { useLayoutStore } from '@/store/layoutStore';
+import CardVisibilityModal from '@/components/layout/CardVisibilityModal';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -12,6 +14,8 @@ interface GridLayoutWrapperProps {
 }
 
 const LAYOUT_CACHE_KEY = 'dashboard_layout_cache';
+const HIDDEN_CACHE_KEY = 'dashboard_hidden_cards_cache';
+const HIDDEN_SETTING_KEY = 'dashboard_hidden_cards';
 
 // Layout default - 8 colunas no lg para permitir resize fino
 const DEFAULT_LAYOUTS = {
@@ -31,8 +35,33 @@ const DEFAULT_LAYOUTS = {
     { i: 'chart-funnel',         x: 4, y: 6, w: 4, h: 3, minW: 3 },
     { i: 'chart-country',        x: 0, y: 9, w: 5, h: 4, minW: 3 },
     { i: 'chart-weekday',        x: 5, y: 9, w: 3, h: 4, minW: 2 },
+    { i: 'chart-country_approval', x: 0, y: 13, w: 4, h: 4, minW: 2 },
   ],
 };
+
+/**
+ * Achata os filhos preservando a chave de cada card.
+ *
+ * A pagina passa os KPIs como um `.map()`, que chega aqui como array dentro do
+ * array de filhos. Para saber quais cards existem — e quais estao ocultos — e
+ * preciso enxergar essa lista plana, e `React.Children.toArray` nao serve:
+ * ele reescreve as chaves dos arrays aninhados, e sao justamente elas que
+ * casam com o layout salvo.
+ */
+function flattenChildren(children: React.ReactNode): React.ReactElement[] {
+  const out: React.ReactElement[] = [];
+
+  const walk = (node: React.ReactNode) => {
+    if (Array.isArray(node)) {
+      node.forEach(walk);
+      return;
+    }
+    if (isValidElement(node)) out.push(node);
+  };
+
+  walk(children);
+  return out;
+}
 
 /**
  * Completa um layout salvo com os cards que ele ainda nao conhece.
@@ -77,10 +106,25 @@ function readCachedLayouts() {
   }
 }
 
+// Mesma ideia para os cards ocultos: sem isto, um card desligado piscaria na
+// tela a cada carregamento, ate a resposta do Supabase chegar.
+function readCachedHidden(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(HIDDEN_CACHE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function GridLayoutWrapper({ children }: GridLayoutWrapperProps) {
   const { isEditingLayout } = useLayoutStore();
   const [mounted, setMounted] = useState(false);
   const [layouts, setLayouts] = useState<any>(DEFAULT_LAYOUTS);
+  const [hidden, setHidden] = useState<string[]>([]);
+  const [isPickerOpen, setPickerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // Enquanto false, o grid fica montado (para medir largura e calcular
@@ -102,16 +146,30 @@ export default function GridLayoutWrapper({ children }: GridLayoutWrapperProps) 
 
   useEffect(() => {
     setLayouts(readCachedLayouts());
+    setHidden(readCachedHidden());
     setMounted(true);
 
-    async function loadLayout() {
+    async function loadSettings() {
       try {
-        const res = await fetch('/api/settings?key=dashboard_layout');
-        const json = await res.json();
-        if (json.data && json.data.length > 0 && json.data[0].value) {
-          setLayouts(withMissingDefaults(json.data[0].value));
+        const [layoutRes, hiddenRes] = await Promise.all([
+          fetch('/api/settings?key=dashboard_layout'),
+          fetch(`/api/settings?key=${HIDDEN_SETTING_KEY}`),
+        ]);
+
+        const layoutJson = await layoutRes.json();
+        if (layoutJson.data && layoutJson.data.length > 0 && layoutJson.data[0].value) {
+          setLayouts(withMissingDefaults(layoutJson.data[0].value));
           try {
-            window.localStorage.setItem(LAYOUT_CACHE_KEY, JSON.stringify(json.data[0].value));
+            window.localStorage.setItem(LAYOUT_CACHE_KEY, JSON.stringify(layoutJson.data[0].value));
+          } catch {}
+        }
+
+        const hiddenJson = await hiddenRes.json();
+        const storedHidden = hiddenJson.data?.[0]?.value;
+        if (Array.isArray(storedHidden)) {
+          setHidden(storedHidden);
+          try {
+            window.localStorage.setItem(HIDDEN_CACHE_KEY, JSON.stringify(storedHidden));
           } catch {}
         }
       } catch (e) {
@@ -123,7 +181,7 @@ export default function GridLayoutWrapper({ children }: GridLayoutWrapperProps) 
       }
     }
 
-    loadLayout();
+    loadSettings();
   }, []);
 
   useEffect(() => {
@@ -170,15 +228,73 @@ export default function GridLayoutWrapper({ children }: GridLayoutWrapperProps) 
     }, 800);
   };
 
+  const persistHidden = async (next: string[]) => {
+    setHidden(next);
+    try {
+      window.localStorage.setItem(HIDDEN_CACHE_KEY, JSON.stringify(next));
+    } catch {}
+
+    setIsSaving(true);
+    try {
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: HIDDEN_SETTING_KEY, value: next }),
+      });
+    } catch (e) {
+      console.warn('Erro ao salvar cards ocultos:', e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const hiddenSet = useMemo(() => new Set(hidden), [hidden]);
+
+  const visibleChildren = useMemo(
+    () => flattenChildren(children).filter((child) => !hiddenSet.has(String(child.key))),
+    [children, hiddenSet]
+  );
+
+  /**
+   * O que vai para o grid e so o layout dos cards visiveis: entrada de layout
+   * sem filho correspondente deixa o react-grid-layout reservando um buraco no
+   * lugar do card oculto.
+   */
+  const visibleLayouts = useMemo(() => {
+    const filtered: any = {};
+    for (const breakpoint of Object.keys(layouts || {})) {
+      const items = layouts[breakpoint];
+      if (!Array.isArray(items)) continue;
+      filtered[breakpoint] = items.filter((item: any) => !hiddenSet.has(item.i));
+    }
+    return filtered;
+  }, [layouts, hiddenSet]);
+
   const handleLayoutChange = (currentLayout: any, allLayouts: any) => {
-    setLayouts(allLayouts);
+    /**
+     * O grid so conhece os cards visiveis, entao o que ele devolve nao inclui
+     * os ocultos. Guardar isso direto apagaria a posicao deles — e, ao
+     * reativar, o card voltaria empilhado no fim em vez de onde estava. Por
+     * isso as entradas ocultas sao recolocadas antes de salvar.
+     */
+    const merged: any = {};
+    const breakpoints = new Set([...Object.keys(layouts || {}), ...Object.keys(allLayouts || {})]);
+
+    breakpoints.forEach((breakpoint) => {
+      const incoming = allLayouts?.[breakpoint] || [];
+      const preserved = (layouts?.[breakpoint] || []).filter((item: any) => hiddenSet.has(item.i));
+      merged[breakpoint] = [...incoming, ...preserved];
+    });
+
+    setLayouts(merged);
+
     // So salva quando o usuario esta editando ativamente no desktop
     // (evita que normalizacoes automaticas do RGL — inclusive as dos
     // breakpoints menores — sobrescrevam o layout salvo)
     if (canEditLayout) {
-      saveToSupabase(allLayouts);
+      saveToSupabase(merged);
       try {
-        window.localStorage.setItem(LAYOUT_CACHE_KEY, JSON.stringify(allLayouts));
+        window.localStorage.setItem(LAYOUT_CACHE_KEY, JSON.stringify(merged));
       } catch {}
     }
   };
@@ -188,14 +304,36 @@ export default function GridLayoutWrapper({ children }: GridLayoutWrapperProps) 
   return (
     <div className="relative">
       {canEditLayout && (
-        <div className="absolute -top-7 right-0 text-xs text-gray-500 z-10">
-          {isSaving ? 'Salvando...' : 'Layout salvo'}
+        <div className="absolute -top-8 right-0 z-10 flex items-center gap-3 text-xs">
+          <span className="text-gray-500">{isSaving ? 'Salvando...' : 'Layout salvo'}</span>
+          <button
+            onClick={() => setPickerOpen(true)}
+            className="flex items-center gap-1.5 rounded-md border border-[#333] bg-[#1E1E1E] px-2.5 py-1 text-gray-300 transition-colors hover:bg-[#2a2a2a] hover:text-white"
+          >
+            <SlidersHorizontal size={13} />
+            Cards
+            {hidden.length > 0 && <span className="text-gray-500">({hidden.length} oculto{hidden.length === 1 ? '' : 's'})</span>}
+          </button>
         </div>
       )}
+
+      {isPickerOpen && (
+        <CardVisibilityModal
+          hidden={hidden}
+          onToggle={(key) =>
+            persistHidden(
+              hiddenSet.has(key) ? hidden.filter((item) => item !== key) : [...hidden, key]
+            )
+          }
+          onShowAll={() => persistHidden([])}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
+
       <div style={{ visibility: ready ? 'visible' : 'hidden' }}>
         <ResponsiveGridLayout
           className={`layout${ready ? '' : ' grid-booting'}`}
-          layouts={layouts}
+          layouts={visibleLayouts}
           breakpoints={{ lg: 1024, md: 768, sm: 640, xs: 480, xxs: 0 }}
           cols={{ lg: 8, md: 4, sm: 2, xs: 1, xxs: 1 }}
           rowHeight={110}
@@ -206,7 +344,7 @@ export default function GridLayoutWrapper({ children }: GridLayoutWrapperProps) 
           containerPadding={[0, 0]}
           measureBeforeMount
         >
-          {children}
+          {visibleChildren}
         </ResponsiveGridLayout>
       </div>
     </div>

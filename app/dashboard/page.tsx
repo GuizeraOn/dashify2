@@ -15,6 +15,7 @@ import CardApprovalChart from '@/components/charts/CardApprovalChart';
 import MetaConversionFunnel from '@/components/charts/MetaConversionFunnel';
 import SalesByCountry from '@/components/charts/SalesByCountry';
 import SalesByWeekday from '@/components/charts/SalesByWeekday';
+import CountryApproval from '@/components/charts/CountryApproval';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Info } from 'lucide-react';
 
@@ -293,6 +294,27 @@ export default function DashboardPage() {
             )}
           >
             {isLoading ? <ChartSkeleton /> : <SalesByWeekday data={data?.weekday_stats} />}
+          </div>
+        </div>
+
+        <div key="chart-country_approval" className="bg-[#1E1E1E] rounded-xl p-5 flex flex-col shadow-sm h-full w-full">
+          {/* Titulo e ordenacao ficam dentro do componente, na mesma linha do
+              card de vendas por pais — sao a mesma lista, lida de outro jeito. */}
+          <div
+            className={cn(
+              'flex-1 w-full relative min-h-0 transition-opacity duration-200',
+              isRefreshing && 'opacity-0'
+            )}
+          >
+            {isLoading ? (
+              <ChartSkeleton />
+            ) : (
+              <CountryApproval
+                data={data?.country_approval_stats}
+                selected={country}
+                onSelect={handleCountrySelect}
+              />
+            )}
           </div>
         </div>
 

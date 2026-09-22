@@ -18,6 +18,7 @@ export interface SummaryData {
   };
   funnel_stats?: FunnelStats;
   country_stats?: CountryStat[];
+  country_approval_stats?: CountryApprovalStat[];
   weekday_stats?: WeekdayStat[];
   available_products?: string[];
 }
@@ -28,6 +29,16 @@ export interface CountryStat {
   orders: number;
   /** Participacao no faturamento aprovado, em porcentagem. */
   share: number;
+}
+
+export interface CountryApprovalStat {
+  country: string;
+  /** Aprovadas, contando as que depois foram reembolsadas. */
+  approved: number;
+  refused: number;
+  /** Tentativas com desfecho — exclui boleto e Pix ainda nao pagos. */
+  resolved: number;
+  approval_rate: number;
 }
 
 export interface WeekdayStat {
