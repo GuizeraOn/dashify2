@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo, isValidElement } from 'react';
-import { SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal, Trash2 } from 'lucide-react';
 import { Responsive } from 'react-grid-layout';
 import { WidthProvider } from 'react-grid-layout/legacy';
 import { useLayoutStore } from '@/store/layoutStore';
@@ -250,9 +250,63 @@ export default function GridLayoutWrapper({ children }: GridLayoutWrapperProps) 
 
   const hiddenSet = useMemo(() => new Set(hidden), [hidden]);
 
+  /**
+   * Cada card visivel ganha uma casca com a lixeira do canto.
+   *
+   * A casca precisa carregar a chave original: e por ela que o
+   * react-grid-layout casa o filho com a entrada do layout salvo. Como o RGL
+   * clona o filho de primeiro nivel para aplicar posicao e tamanho, quem
+   * recebe as medidas passa a ser a casca — e o card de dentro, que ja vinha
+   * com `h-full w-full`, continua preenchendo tudo.
+   */
   const visibleChildren = useMemo(
-    () => flattenChildren(children).filter((child) => !hiddenSet.has(String(child.key))),
-    [children, hiddenSet]
+    () =>
+      flattenChildren(children)
+        .filter((child) => !hiddenSet.has(String(child.key)))
+        .map((child) => {
+          const key = String(child.key);
+
+          return (
+            // `relative` e a garantia de que a lixeira se posicione pelo card,
+            // e nao pelo grid inteiro. Quando o RGL escreve position:absolute
+            // no style, o inline vence a classe — e absoluto tambem serve de
+            // referencia; quando nao escreve, a classe assume.
+            // `hover:z-30` resolve um detalhe traicoeiro: o RGL posiciona cada
+            // card com `transform`, e transform cria contexto de empilhamento
+            // proprio. Sem subir o card inteiro, a lixeira que se projeta para
+            // fora da borda fica por baixo do card vizinho — visivel, mas
+            // impossivel de clicar. O `relative` garante que ela se posicione
+            // pelo card, e nao pelo grid inteiro (quando o RGL escreve
+            // position:absolute no style, o inline vence a classe — e absoluto
+            // tambem serve de referencia).
+            <div key={key} className="group relative hover:z-30">
+              {child}
+
+              {canEditLayout && (
+                <button
+                  // A classe e o que o `cancel` do RGL procura para nao
+                  // confundir este clique com o inicio de um arrasto.
+                  className="card-remove absolute -right-2 -top-2 z-20 rounded-full border border-[#3a3a3a] bg-[#252525] p-1.5 text-gray-400 opacity-0 shadow-lg transition-all hover:border-red-500/40 hover:bg-red-500/15 hover:text-red-400 focus:opacity-100 group-hover:opacity-100"
+                  title="Ocultar card"
+                  aria-label="Ocultar card"
+                  // O mousedown e onde o arrasto comeca; parar aqui garante
+                  // que o card nao saia do lugar junto com o clique.
+                  onMouseDown={(event) => event.stopPropagation()}
+                  onTouchStart={(event) => event.stopPropagation()}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    persistHidden([...hidden, key]);
+                  }}
+                >
+                  <Trash2 size={13} />
+                </button>
+              )}
+            </div>
+          );
+        }),
+    // `hidden` entra na lista porque o clique acima o le para montar o proximo
+    // estado; sem ele, esconder dois cards seguidos perderia o primeiro.
+    [children, hiddenSet, canEditLayout, hidden] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   /**
@@ -338,7 +392,7 @@ export default function GridLayoutWrapper({ children }: GridLayoutWrapperProps) 
           cols={{ lg: 8, md: 4, sm: 2, xs: 1, xxs: 1 }}
           rowHeight={110}
           onLayoutChange={handleLayoutChange}
-          dragConfig={{ enabled: canEditLayout }}
+          dragConfig={{ enabled: canEditLayout, cancel: '.card-remove' }}
           resizeConfig={{ enabled: canEditLayout }}
           margin={[16, 16]}
           containerPadding={[0, 0]}
