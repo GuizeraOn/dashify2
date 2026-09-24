@@ -50,6 +50,10 @@ Plans:
   3. Dashboard carrega todas as telas sem dependência do Sheets API e com tempo de resposta inferior a 500ms.
 **Plans**: 2 plans
 
+Plans:
+- [ ] 07-01: Service de Consulta ao Supabase (lib/sales-service.ts) e Migração de /api/sales-pulse, /api/summary e /api/transactions
+- [ ] 07-02: Migração de /api/campaigns, /api/reports e /api/products com Verificação de Performance e Paridade
+
 ### Phase 8: Aposentadoria do Google Sheets, Limpeza e Validação
 **Goal**: Remover dependências legadas do Google Sheets e validar operação autônoma.
 **Depends on**: Phase 7
