@@ -88,7 +88,7 @@ export async function fetchSales(options: FetchSalesOptions = {}): Promise<Venda
   while (true) {
     let query = supabase
       .from('sales')
-      .select('*')
+      .select('code, date, customer_name, customer_email, customer_phone, customer_document, country, state, city, product_code, product_name, plan_code, plan_name, funnel_step, gross_revenue_brl, net_revenue_brl, installments, payment_method, status, sale_status_enum, sale_status_detail, utm_source, utm_campaign, utm_medium, utm_content, utm_term, src')
       .order('date', { ascending: false })
       .range(from, from + PAGE_SIZE - 1);
 

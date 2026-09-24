@@ -45,18 +45,26 @@ export default function DashboardPage() {
     [router, searchParams]
   );
 
-  // Sincroniza dados do Meta automaticamente ao entrar no dashboard
+  // Sincroniza dados do Meta de forma inteligente (com cooldown de 15 minutos)
   useEffect(() => {
     async function autoSync() {
       try {
-        await fetch('/api/meta/sync', { method: 'POST' });
-        await queryClient.invalidateQueries();
+        const lastSync = localStorage.getItem('dashify_last_meta_sync');
+        const now = Date.now();
+        if (lastSync && now - Number(lastSync) < 15 * 60 * 1000) {
+          return;
+        }
+        localStorage.setItem('dashify_last_meta_sync', String(now));
+        const res = await fetch('/api/meta/sync', { method: 'POST' });
+        if (res.ok) {
+          queryClient.invalidateQueries();
+        }
       } catch (e) {
         console.warn('Auto-sync Meta falhou:', e);
       }
     }
     autoSync();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [queryClient]);
 
   const { data, isLoading, isError, error, isFetching } = useSummary({
     period,
@@ -67,19 +75,17 @@ export default function DashboardPage() {
     dateEnd,
   });
 
-  // Os numeros somem no inicio da atualizacao e so voltam com os dados novos.
-  // A bandeira do store cobre o "Atualizar" do Header, que comeca pela
-  // sincronizacao do Meta; o isFetching cobre as demais rebuscas. O isLoading
-  // fica de fora porque ali quem aparece e o esqueleto, nao os numeros.
+  // Apenas esmaece a tela quando o usuário clica explicitamente em "Atualizar" no Header.
+  // Rebuscas de segundo plano mantêm os dados atuais visíveis sem piscar a tela.
   const isRefreshingFromHeader = useRefreshStore((state) => state.isRefreshing);
-  const isRefreshing = isRefreshingFromHeader || (isFetching && !isLoading);
+  const isRefreshing = isRefreshingFromHeader;
 
   if (isError) {
     return (
       <div className="p-6 bg-red-900/20 text-red-400 rounded-lg border border-red-900/50">
         <h3 className="font-bold mb-2">Erro ao carregar dados</h3>
         <p>{error.message}</p>
-        <p className="text-sm mt-4 text-red-500">Verifique se as variáveis de ambiente GOOGLE_SERVICE_ACCOUNT_JSON e SPREADSHEET_ID estão configuradas corretamente no arquivo .env.local.</p>
+        <p className="text-sm mt-4 text-red-500">Verifique a conexão com o Supabase e as configurações em .env.local.</p>
       </div>
     );
   }

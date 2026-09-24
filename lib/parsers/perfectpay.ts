@@ -191,13 +191,22 @@ export function calculateNetRevenue(
 /**
  * Normaliza o payload bruto do webhook da Perfect Pay para o modelo SalesRow da tabela sales
  */
-export function parsePerfectPayPayload(payload: PerfectPayWebhookPayload): SalesRow {
+export function parsePerfectPayPayload(
+  payload: PerfectPayWebhookPayload,
+  fxRate: number = 1.0
+): SalesRow {
   const code = String(payload.code || '').trim();
-  const saleAmount = typeof payload.sale_amount === 'number' 
+  const rawSaleAmount = typeof payload.sale_amount === 'number' 
     ? payload.sale_amount 
     : parseFloat(String(payload.sale_amount || '0').replace(',', '.')) || 0;
 
-  const netRevenue = calculateNetRevenue(saleAmount, payload.commission);
+  const rawNetRevenue = calculateNetRevenue(rawSaleAmount, payload.commission);
+
+  const isUsd = payload.currency_enum === 2 || payload.currency_enum_key === 'USD';
+  const effectiveRate = isUsd && fxRate > 0 ? fxRate : 1.0;
+
+  const grossRevenueBrl = Number((rawSaleAmount * effectiveRate).toFixed(2));
+  const netRevenueBrl = Number((rawNetRevenue * effectiveRate).toFixed(2));
 
   // Data canônica: prioriza data de aprovação se aprovada, senão date_created
   const rawDate = (payload.date_approved || payload.date_created || new Date().toISOString()).trim();
@@ -254,8 +263,8 @@ export function parsePerfectPayPayload(payload: PerfectPayWebhookPayload): Sales
     plan_code: payload.plan?.code ? String(payload.plan.code).trim() : null,
     plan_name: payload.plan?.name ? String(payload.plan.name).trim() : null,
     funnel_step: funnelStep,
-    gross_revenue_brl: saleAmount,
-    net_revenue_brl: netRevenue,
+    gross_revenue_brl: grossRevenueBrl,
+    net_revenue_brl: netRevenueBrl,
     installments: payload.installments ? Number(payload.installments) : 1,
     payment_method: paymentMethod,
     status,
@@ -267,7 +276,10 @@ export function parsePerfectPayPayload(payload: PerfectPayWebhookPayload): Sales
     utm_content: payload.metadata?.utm_content || null,
     utm_term: payload.metadata?.utm_term || null,
     src: payload.metadata?.src || null,
-    raw_payload: payload as Record<string, unknown>,
+    raw_payload: {
+      ...(payload as Record<string, unknown>),
+      fx_rate: effectiveRate,
+    },
     updated_at: new Date().toISOString(),
   };
 }
