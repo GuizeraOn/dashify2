@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { ChevronDown, ChevronUp, ChevronsUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { ChevronDown, ChevronUp, ChevronsUpDown, ChevronLeft, ChevronRight, MoveHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Select } from './Select';
 
@@ -69,9 +69,140 @@ export function DataTable<T>({ data, columns, defaultSortKey, defaultSortDesc = 
     setPage(totalPages);
   }
 
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
+  const hasMovedRef = useRef(false);
+  const [canScroll, setCanScroll] = useState(false);
+
+  // Verifica se a tabela tem overflow horizontal
+  const checkScrollable = useCallback(() => {
+    if (tableContainerRef.current) {
+      const { scrollWidth, clientWidth } = tableContainerRef.current;
+      setCanScroll(scrollWidth > clientWidth);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkScrollable();
+    window.addEventListener('resize', checkScrollable);
+    return () => window.removeEventListener('resize', checkScrollable);
+  }, [checkScrollable, paginatedData]);
+
+  // Drag-to-scroll horizontal em qualquer lugar do container
+  useEffect(() => {
+    const container = tableContainerRef.current;
+    if (!container) return;
+
+    let startX = 0;
+    let scrollLeft = 0;
+    let isDown = false;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return; // apenas botão principal
+      const target = e.target as HTMLElement;
+      // Não interrompe seletores ou inputs se existirem
+      if (target.closest('input, select, textarea')) return;
+
+      isDown = true;
+      hasMovedRef.current = false;
+      startX = e.pageX - container.offsetLeft;
+      scrollLeft = container.scrollLeft;
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDown) return;
+      const x = e.pageX - container.offsetLeft;
+      const walk = x - startX;
+
+      if (Math.abs(walk) > 4) {
+        if (!hasMovedRef.current) {
+          hasMovedRef.current = true;
+          isDraggingRef.current = true;
+          setIsDragging(true);
+        }
+        e.preventDefault();
+        container.scrollLeft = scrollLeft - walk;
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (!isDown) return;
+      isDown = false;
+      if (hasMovedRef.current) {
+        // Pausa breve para ignorar o 'click' nativo que o navegador dispara após mouseup
+        setTimeout(() => {
+          hasMovedRef.current = false;
+          isDraggingRef.current = false;
+          setIsDragging(false);
+        }, 50);
+      }
+    };
+
+    // Bloqueia clique no cabeçalho ou linha caso tenha havido arrasto
+    const handleClickCapture = (e: MouseEvent) => {
+      if (hasMovedRef.current || isDraggingRef.current) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    };
+
+    container.addEventListener('mousedown', handleMouseDown);
+    container.addEventListener('click', handleClickCapture, true);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      container.removeEventListener('mousedown', handleMouseDown);
+      container.removeEventListener('click', handleClickCapture, true);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
+  const scrollByAmount = (amount: number) => {
+    tableContainerRef.current?.scrollBy({ left: amount, behavior: 'smooth' });
+  };
+
   return (
-    <div className="w-full flex flex-col space-y-4">
-      <div className="overflow-x-auto bg-[#1E1E1E] rounded-xl shadow-sm border border-[#333]">
+    <div className="w-full flex flex-col space-y-3">
+      {/* Barra de auxílio de rolagem quando há colunas ocultas */}
+      {canScroll && (
+        <div className="flex items-center justify-between text-xs text-gray-400 px-1 py-0.5">
+          <span className="flex items-center gap-1.5 select-none">
+            <MoveHorizontal size={14} className="text-cyan-400 animate-pulse" />
+            <span className="text-gray-300 font-medium">Dica:</span> clique e arraste para os lados em qualquer ponto da tabela para navegar
+          </span>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => scrollByAmount(-350)}
+              className="flex items-center gap-1 px-2 py-1 rounded bg-[#242424] hover:bg-[#333] border border-[#3a3a3a] text-gray-300 hover:text-white transition-all shadow-sm active:scale-95"
+              title="Rolar colunas para a esquerda"
+            >
+              <ChevronLeft size={14} />
+              <span>Esquerda</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollByAmount(350)}
+              className="flex items-center gap-1 px-2 py-1 rounded bg-[#242424] hover:bg-[#333] border border-[#3a3a3a] text-gray-300 hover:text-white transition-all shadow-sm active:scale-95"
+              title="Rolar colunas para a direita"
+            >
+              <span>Direita</span>
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div 
+        ref={tableContainerRef}
+        className={cn(
+          "table-drag-scroll overflow-x-auto bg-[#1E1E1E] rounded-xl shadow-sm border border-[#333] transition-colors",
+          isDragging ? "cursor-grabbing select-none" : "cursor-grab"
+        )}
+      >
         <table className="w-full text-sm text-left text-gray-300">
           <thead className="text-xs text-gray-400 uppercase bg-[#242424] border-b border-[#333]">
             <tr>

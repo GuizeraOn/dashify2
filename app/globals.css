@@ -113,3 +113,23 @@ body {
 .dashify-calendar .rdp-today:not(.rdp-selected) .rdp-day_button {
   font-weight: 700;
 }
+
+/* Scrollbar horizontal moderno para tabelas com drag-to-scroll */
+.table-drag-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+.table-drag-scroll::-webkit-scrollbar-track {
+  background: #1e1e1e;
+  border-radius: 4px;
+}
+.table-drag-scroll::-webkit-scrollbar-thumb {
+  background: #383838;
+  border-radius: 4px;
+}
+.table-drag-scroll::-webkit-scrollbar-thumb:hover {
+  background: #525252;
+}
+.table-drag-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #383838 #1e1e1e;
+}
