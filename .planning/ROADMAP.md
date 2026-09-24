@@ -1,74 +1,67 @@
-# ROADMAP — Dashify
+# Roadmap: Dashify
 
 ## Milestone v2.0 — Webhook Nativo Perfect Pay & Supabase Vendas
 
-**Objetivo:** Substituir a leitura do Google Sheets por um receptor nativo de webhook da Perfect Pay, persistir todas as vendas no Supabase (PostgreSQL), importar o histórico existente e migrar todas as rotas do dashboard para operarem 100% sobre o banco de dados.
+Substituição definitiva da leitura do Google Sheets por um receptor nativo de webhook da Perfect Pay, persistência no Supabase (PostgreSQL), importação do histórico existente e migração das rotas do dashboard para operarem 100% no banco de dados.
 
----
+## Phases
 
-### Fase 5 — Modelagem no Supabase e Receptor de Webhook Perfect Pay
-**Objetivo:** Criar a estrutura de banco de dados para vendas e o endpoint de ingestão de webhooks protegido e idempotente.
+- [ ] **Phase 5: Modelagem Supabase e Receptor de Webhook Perfect Pay** - Criar tabela sales, parser dos eventos da Perfect Pay, rota de webhook com validação de token e liberação no proxy.
+- [ ] **Phase 6: Migração de Dados Históricos (Google Sheets para Supabase)** - Script de migração one-off importando todas as transações passadas para o Supabase com paridade de totais.
+- [ ] **Phase 7: Migração das Rotas Analíticas para o Supabase** - Atualizar summary, transactions, campaigns, reports, products e sales-pulse para consumirem o Supabase.
+- [ ] **Phase 8: Aposentadoria do Google Sheets, Limpeza e Validação** - Remover lib/sheets.ts, dependência googleapis, variáveis legadas e validar fluxo end-to-end.
 
-**Entregáveis:**
-- Script SQL de migração (`supabase_vendas.sql`) criando a tabela `sales` com índices adequados (`date`, `status`, `product`, `utm_campaign`, etc.) e campo `raw_payload JSONB`.
-- Parser e normalizador dos dados da Perfect Pay (`lib/parsers/perfectpay.ts`) convertendo enums de status, meios de pagamento, países e comissões para o padrão canônico do sistema.
-- Endpoint de Webhook HTTP POST em `app/api/webhooks/perfectpay/route.ts` com validação de `PERFECTPAY_WEBHOOK_TOKEN` e upsert idempotente.
-- Atualização do `proxy.ts` liberando o caminho do webhook para chamadas externas sem exigir sessão de usuário do Supabase.
+## Phase Details
 
-**Critérios de Aceite:**
-- Envio de payload de exemplo da Perfect Pay para `/api/webhooks/perfectpay` retorna `HTTP 200 { success: true }`.
-- Envio com token incorreto ou ausente é rejeitado com `HTTP 401 Unauthorized`.
-- Registro inserido no Supabase contém todos os campos mapeados corretamente (valores, cliente, UTMs, datas) e JSON bruto preservado.
-- Reenvio do mesmo código com status alterado (ex: de 'pending' para 'approved') atualiza o registro existente sem duplicar.
+### Phase 5: Modelagem Supabase e Receptor de Webhook Perfect Pay
+**Goal**: Criar a estrutura de banco de dados para vendas e o endpoint de ingestão de webhooks protegido e idempotente.
+**Depends on**: Nothing (primeira fase da v2.0)
+**Requirements**: WH-01, WH-02, WH-03, WH-04, DB-01, DB-02, DB-03, DB-04
+**Success Criteria** (what must be TRUE):
+  1. Tabela `sales` existe no Supabase com chave primária em `code`, colunas indexadas e coluna `raw_payload JSONB`.
+  2. Endpoint `/api/webhooks/perfectpay` aceita requisições HTTP POST públicas (liberado no `proxy.ts`).
+  3. Requisições com token inválido recebem HTTP 401; requisições com token válido recebem HTTP 200 `{ success: true }`.
+  4. Webhook realiza upsert idempotente por `code`, mapeando status (`sale_status_enum`), meio de pagamento, países e comissões para o schema canônico.
+**Plans**: 2 plans
 
----
+Plans:
+- [ ] 05-01: Modelagem Supabase (supabase_vendas.sql), Tipagens (lib/types.ts) e Parser Perfect Pay (lib/parsers/perfectpay.ts)
+- [ ] 05-02: Rota de Webhook (/api/webhooks/perfectpay), Liberação no proxy.ts e Testes Automatizados
 
-### Fase 6 — Migração de Dados Históricos (Google Sheets ➔ Supabase)
-**Objetivo:** Transferir todas as vendas registradas na planilha Google Sheets atual para a nova tabela do Supabase para manter a continuidade histórica do dashboard.
+### Phase 6: Migração de Dados Históricos (Google Sheets para Supabase)
+**Goal**: Transferir todas as vendas da planilha atual para a nova tabela do Supabase mantendo histórico inalterado.
+**Depends on**: Phase 5
+**Requirements**: MIG-01, MIG-02, MIG-03
+**Success Criteria** (what must be TRUE):
+  1. Script `scripts/migrate-sheets-to-supabase.mjs` lê `db_vendas!A:W` e insere em lote no Supabase.
+  2. Total de Faturamento Líquido e quantidade de vendas aprovadas no Supabase batem exatamente com a planilha.
+**Plans**: 1 plan
 
-**Entregáveis:**
-- Script de migração (`scripts/migrate-sheets-to-supabase.mjs`) que lê as abas `db_vendas!A:W` e `Log_Webhooks!C:C`.
-- Transformação de linhas antigas no schema da tabela `sales` com data de inserção e identificador único.
-- Execução do lote de importação com barra de progresso e relatório final de inserções/conflitos.
-- Script de validação de paridade de totais (conferindo soma de faturamento líquido e contagem de vendas aprovadas).
+### Phase 7: Migração das Rotas Analíticas para o Supabase
+**Goal**: Fazer com que todas as APIs do dashboard consultem diretamente o Supabase em vez do Google Sheets.
+**Depends on**: Phase 6
+**Requirements**: API-01, API-02, API-03, API-04, API-05, API-06
+**Success Criteria** (what must be TRUE):
+  1. `/api/summary`, `/api/transactions`, `/api/campaigns`, `/api/reports`, `/api/products` leem da tabela `sales`.
+  2. `/api/sales-pulse` calcula assinatura leve a partir de `MAX(updated_at)` e `COUNT(*)` do Supabase em menos de 100ms.
+  3. Dashboard carrega todas as telas sem dependência do Sheets API e com tempo de resposta inferior a 500ms.
+**Plans**: 2 plans
 
-**Critérios de Aceite:**
-- Todas as transações da planilha são migradas para a tabela `sales`.
-- Soma total do Faturamento Líquido no Supabase bate centavo a centavo com o total da planilha.
-- Nenhuma venda tem data, país ou UTM corrompidos na migração.
+### Phase 8: Aposentadoria do Google Sheets, Limpeza e Validação
+**Goal**: Remover dependências legadas do Google Sheets e validar operação autônoma.
+**Depends on**: Phase 7
+**Requirements**: CLEAN-01, CLEAN-02, CLEAN-03
+**Success Criteria** (what must be TRUE):
+  1. `lib/sheets.ts` e `check-sheets.js` removidos; `googleapis` desinstalado do `package.json`.
+  2. `npm run build` executa com sucesso sem erros.
+  3. Webhook de teste simula ciclo completo de venda refletindo instantaneamente no dashboard.
+**Plans**: 1 plan
 
----
+## Progress
 
-### Fase 7 — Migração das Rotas Analíticas para o Supabase
-**Objetivo:** Fazer com que todas as APIs do dashboard consultem diretamente o Supabase em vez do Google Sheets.
-
-**Entregáveis:**
-- Função utilitária de busca e filtros de vendas no Supabase (`lib/sales-db.ts`).
-- `GET /api/summary`: cálculo de KPIs e agregações de gráficos (faturamento diário, meios de pagamento, aprovação de cartão, países, dias da semana) lendo do Supabase.
-- `GET /api/transactions`: listagem de vendas com ordenação e filtros alimentada pelo Supabase.
-- `GET /api/campaigns`: cruzamento de vendas por UTMs (`utm_campaign`, `utm_term`, `utm_content`) via banco.
-- `GET /api/reports`: heatmap e relatórios alimentados pelas vendas do Supabase.
-- `GET /api/products`: métricas por produto aproveitando os códigos nativos salvos no webhook.
-- `GET /api/sales-pulse`: geração de assinatura leve instantânea baseada em `MAX(updated_at)` e `COUNT(*)` da tabela `sales`.
-
-**Critérios de Aceite:**
-- Todas as telas do Dashboard (`/dashboard`, `/dashboard/vendas`, `/dashboard/campanhas`, `/dashboard/produtos`, `/dashboard/relatorios`) carregam dados com velocidade inferior a 500ms.
-- As métricas e gráficos exibem exatamente os mesmos números apurados anteriormente.
-- O hook `useSalesWatcher` detecta uma nova inserção ou atualização no Supabase sem necessidade de ler planilhas.
-
----
-
-### Fase 8 — Aposentadoria do Google Sheets, Limpeza e Validação End-to-End
-**Objetivo:** Remover todas as dependências legadas do Google Sheets, atualizar a documentação e validar o funcionamento ponta a ponta.
-
-**Entregáveis:**
-- Remoção de `lib/sheets.ts` e do script auxiliar `check-sheets.js`.
-- Desinstalação do pacote `googleapis` em `package.json`.
-- Atualização de `.env.example`, `.env.local` e `README.md` (removendo `GOOGLE_SERVICE_ACCOUNT_JSON` e `SPREADSHEET_ID`, adicionando `PERFECTPAY_WEBHOOK_TOKEN` e instruções do webhook).
-- Build de produção verificado com sucesso (`npm run build`).
-- Simulação de testes end-to-end simulando ciclo de vida de uma venda via webhook da Perfect Pay e checagem do reflexo em tempo real no dashboard.
-
-**Critérios de Aceite:**
-- `npm run build` compila com zero erros de tipo ou módulos ausentes.
-- O projeto não referencia mais o Google Sheets em nenhuma rota ativa.
-- Dashboard 100% operacional, seguro e autônomo com Meta Ads + Webhook Perfect Pay.
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| Phase 5: Modelagem Supabase e Receptor de Webhook | 0/2 | Not started | - |
+| Phase 6: Migração de Dados Históricos | 0/1 | Not started | - |
+| Phase 7: Migração das Rotas Analíticas | 0/2 | Not started | - |
+| Phase 8: Aposentadoria do Sheets e Validação | 0/1 | Not started | - |
