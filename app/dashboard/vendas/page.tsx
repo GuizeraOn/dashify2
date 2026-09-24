@@ -11,9 +11,9 @@ import { Select } from '@/components/ui/Select';
 export default function VendasPage() {
   const searchParams = useSearchParams();
   const period = searchParams.get('period') || 'today';
-  const product = searchParams.get('product') || undefined;
+  const products = searchParams.getAll('product');
 
-  const { data, isLoading, isError } = useTransactions({ period, product });
+  const { data, isLoading, isError } = useTransactions({ period, products });
 
   // Local Filter States
   const [filterStatus, setFilterStatus] = useState<string>('qualquer');

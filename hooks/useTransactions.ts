@@ -3,16 +3,17 @@ import { VendasRow } from '@/lib/types';
 
 interface UseTransactionsOptions {
   period?: string;
-  product?: string;
+  /** Vazio quer dizer todos. Vai na URL repetido: ?product=A&product=B */
+  products?: string[];
 }
 
-export function useTransactions({ period = 'today', product }: UseTransactionsOptions = {}) {
+export function useTransactions({ period = 'today', products }: UseTransactionsOptions = {}) {
   return useQuery<{ transactions: VendasRow[] }>({
-    queryKey: ['transactions', period, product],
+    queryKey: ['transactions', period, products],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (period) params.append('period', period);
-      if (product) params.append('product', product);
+      products?.forEach((item) => params.append('product', item));
 
       const res = await fetch(`/api/transactions?${params.toString()}`);
       if (!res.ok) {

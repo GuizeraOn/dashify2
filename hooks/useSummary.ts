@@ -71,7 +71,8 @@ export interface FunnelStats {
 interface UseSummaryOptions {
   period?: string;
   campaign?: string;
-  product?: string;
+  /** Vazio quer dizer todos. Vai na URL repetido: ?product=A&product=B */
+  products?: string[];
   country?: string;
   dateStart?: string;
   dateEnd?: string;
@@ -80,18 +81,18 @@ interface UseSummaryOptions {
 export function useSummary({
   period = 'today',
   campaign,
-  product,
+  products,
   country,
   dateStart,
   dateEnd,
 }: UseSummaryOptions = {}) {
   return useQuery<SummaryData>({
-    queryKey: ['summary', period, campaign, product, country, dateStart, dateEnd],
+    queryKey: ['summary', period, campaign, products, country, dateStart, dateEnd],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (period) params.append('period', period);
       if (campaign) params.append('campaign', campaign);
-      if (product) params.append('product', product);
+      products?.forEach((item) => params.append('product', item));
       if (country) params.append('country', country);
       if (dateStart) params.append('dateStart', dateStart);
       if (dateEnd) params.append('dateEnd', dateEnd);

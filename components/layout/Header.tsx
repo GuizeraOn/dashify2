@@ -4,6 +4,7 @@ import { Info } from 'lucide-react';
 import { useState } from 'react';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Select } from '../ui/Select';
+import { MultiSelect } from '../ui/MultiSelect';
 import DateRangePicker from '../ui/DateRangePicker';
 import { useSummary } from '@/hooks/useSummary';
 import { useSalesWatcher } from '@/hooks/useSalesWatcher';
@@ -31,7 +32,10 @@ export default function Header() {
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
 
   const currentPeriod = searchParams.get('period') || 'today';
-  const currentProduct = searchParams.get('product') || 'qualquer';
+  // Repetido na URL (?product=A&product=B) em vez de separado por virgula:
+  // nome de produto e texto livre, e qualquer separador escolhido acabaria
+  // aparecendo dentro de um nome algum dia.
+  const selectedProducts = searchParams.getAll('product');
   const dateStart = searchParams.get('dateStart') || undefined;
   const dateEnd = searchParams.get('dateEnd') || undefined;
 
@@ -62,16 +66,16 @@ export default function Header() {
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  const handleProductChange = (val: string) => {
+  const handleProductsChange = (next: string[]) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set('product', val);
+    params.delete('product');
+    next.forEach((value) => params.append('product', value));
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  const productOptions = [
-    { label: 'Qualquer', value: 'qualquer' },
-    ...(data?.available_products?.map(p => ({ label: p, value: p })) || [])
-  ];
+  // Sem a linha "Qualquer": no MultiSelect ela e a propria lista vazia, e vem
+  // pronta no componente.
+  const productOptions = data?.available_products?.map(p => ({ label: p, value: p })) || [];
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -167,10 +171,11 @@ export default function Header() {
         {/* Produtos */}
         <div className="flex flex-col gap-1.5">
           <label className="text-gray-300 text-xs font-medium">Produtos</label>
-          <Select 
-            value={currentProduct}
-            onChange={handleProductChange}
+          <MultiSelect
+            selected={selectedProducts}
+            onChange={handleProductsChange}
             options={productOptions}
+            noun="produtos"
           />
         </div>
 

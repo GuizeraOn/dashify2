@@ -11,7 +11,9 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const period = searchParams.get('period');
     const campaign = searchParams.get('campaign');
-    const product = searchParams.get('product');
+    // Lista vazia quer dizer todos. 'qualquer' ainda e aceito por causa de
+    // links antigos, de quando o filtro era de um produto so.
+    const products = searchParams.getAll('product').filter(item => item && item !== 'qualquer');
     const country = searchParams.get('country');
 
     // Periodo resolvido no fuso do negocio (ver lib/dates.ts). Datas soltas na
@@ -49,8 +51,8 @@ export async function GET(request: NextRequest) {
       metaData = metaData.filter(row => row.campaign_name === campaign);
     }
 
-    if (product && product !== 'qualquer') {
-      vendasData = vendasData.filter(row => row.produto === product);
+    if (products.length > 0) {
+      vendasData = vendasData.filter(row => products.includes(row.produto));
     }
 
     // Guardado antes do filtro de pais porque dois consumidores precisam da

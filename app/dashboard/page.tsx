@@ -25,7 +25,7 @@ export default function DashboardPage() {
   const queryClient = useQueryClient();
   const period = searchParams.get('period') || 'today';
   const campaign = searchParams.get('campaign') || undefined;
-  const product = searchParams.get('product') || undefined;
+  const products = searchParams.getAll('product');
   const country = searchParams.get('country') || undefined;
   const dateStart = searchParams.get('dateStart') || undefined;
   const dateEnd = searchParams.get('dateEnd') || undefined;
@@ -61,7 +61,7 @@ export default function DashboardPage() {
   const { data, isLoading, isError, error, isFetching } = useSummary({
     period,
     campaign,
-    product,
+    products,
     country,
     dateStart,
     dateEnd,

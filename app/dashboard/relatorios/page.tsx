@@ -10,9 +10,9 @@ import { ChartSkeleton } from '@/components/LoadingSkeleton';
 export default function RelatoriosPage() {
   const searchParams = useSearchParams();
   const period = searchParams.get('period') || 'today';
-  const product = searchParams.get('product') || undefined;
+  const products = searchParams.getAll('product');
 
-  const { data, isLoading, isError } = useReports({ period, product });
+  const { data, isLoading, isError } = useReports({ period, products });
 
   if (isError) {
     return (

@@ -7,7 +7,9 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || 'today';
-    const product = searchParams.get('product') || 'qualquer';
+    // Lista vazia quer dizer todos. 'qualquer' ainda e aceito por causa de
+    // links antigos, de quando o filtro era de um produto so.
+    const products = searchParams.getAll('product').filter(item => item && item !== 'qualquer');
     
     // Periodo resolvido no fuso do negocio (ver lib/dates.ts).
     const { dateStart, dateEnd } = resolvePeriod(period, {
@@ -38,8 +40,8 @@ export async function GET(request: Request) {
     }
     
     // Filter Product
-    if (product && product !== 'qualquer') {
-      vendasData = vendasData.filter(row => row.produto === product);
+    if (products.length > 0) {
+      vendasData = vendasData.filter(row => products.includes(row.produto));
     }
 
     // 1. Heatmap Data (Count of sales by DayOfWeek and HourOfDay)
