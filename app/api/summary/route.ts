@@ -86,26 +86,11 @@ export async function GET(request: NextRequest) {
     
     const payment_stats = Object.entries(paymentMap).map(([name, value]) => ({ name, value }));
 
-    // Card approval stats: aprovadas vs recusadas reais (tentativas resolvidas no gateway)
+    // Card approval stats: aprovadas vs não aprovadas (incluindo Aguardando, Não Autorizado, Cartão Inválido, Cancelado, Outros)
     const CARD_KEYWORDS = ['cartão', 'cartao', 'credit', 'crédito', 'credito'];
     const isCardPayment = (pm: string) => CARD_KEYWORDS.some(kw => (pm || '').toLowerCase().includes(kw));
 
     const cardVendas = vendasData.filter(row => isCardPayment(row.payment_method));
-
-    // Determina se um status conta como recusa/falha (Não Autorizado, Cartão Inválido, Cancelado, Outros, etc.)
-    const isRefusalStatus = (formatted: ReturnType<typeof formatStatus>) => {
-      if (formatted.category === 'refused' || formatted.category === 'cancelled') return true;
-      if (formatted.label === 'Outros' || formatted.original.toLowerCase() === 'outro' || formatted.original.toLowerCase() === 'outros') return true;
-      if (
-        formatted.category !== 'approved' &&
-        formatted.category !== 'pending' &&
-        formatted.category !== 'refunded' &&
-        formatted.label !== 'Abandono'
-      ) {
-        return true;
-      }
-      return false;
-    };
 
     let cardApproved = 0;
     let cardRefused = 0;
@@ -118,21 +103,20 @@ export async function GET(request: NextRequest) {
 
       if (formatted.category === 'approved') {
         cardApproved += 1;
-      } else if (isRefusalStatus(formatted)) {
+      } else {
+        // Inclui Aguardando, Não Autorizado, Cartão Inválido, Cancelado, Outros e demais recusas
         cardRefused += 1;
       }
-      // 'pending' (aguardando) e 'Abandono' aparecem nas fatias do gráfico,
-      // mas não são falhas resolvidas no gateway, portanto não reduzem a taxa de aprovação
     });
 
-    const cardResolved = cardApproved + cardRefused;
-    const cardApprovalRate = cardResolved > 0 ? (cardApproved / cardResolved) * 100 : 0;
+    const cardTotal = cardVendas.length;
+    const cardApprovalRate = cardTotal > 0 ? (cardApproved / cardTotal) * 100 : 0;
 
     const card_approval_stats = {
       approved: cardApproved,
       refused: cardRefused,
-      total: cardVendas.length,
-      resolved: cardResolved,
+      total: cardTotal,
+      resolved: cardTotal,
       approval_rate: Math.round(cardApprovalRate * 10) / 10,
       breakdown: Object.entries(cardStatusMap).map(([status, count]) => ({ status, count }))
     };
@@ -211,6 +195,12 @@ export async function GET(request: NextRequest) {
      * Reembolsado conta como aprovado: a compra passou no checkout, que e o
      * que esta sendo medido aqui. O estorno veio depois, e ja tem card proprio.
      */
+    const isRefusalStatus = (formatted: ReturnType<typeof formatStatus>) => {
+      if (formatted.category === 'refused' || formatted.category === 'cancelled') return true;
+      if (formatted.label === 'Outros' || formatted.original.toLowerCase() === 'outro' || formatted.original.toLowerCase() === 'outros') return true;
+      return false;
+    };
+
     const approvalTotals: Record<string, { approved: number; refused: number }> = {};
 
     vendasBeforeCountryFilter.forEach(row => {

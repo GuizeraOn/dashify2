@@ -86,11 +86,7 @@ export default function CardApprovalChart({ data }: Props) {
           <span className="text-sm text-gray-300 font-medium">Taxa de Aprovação — Cartão</span>
         </div>
         {data && data.total > 0 && (
-          <span className="text-xs text-gray-500">
-            {data.resolved !== undefined && data.resolved !== data.total
-              ? `${data.resolved} processadas (${data.total} total)`
-              : `${data.total} transações`}
-          </span>
+          <span className="text-xs text-gray-500">{data.total} transações</span>
         )}
       </div>
 
@@ -109,7 +105,7 @@ export default function CardApprovalChart({ data }: Props) {
               </span>
               <span
                 className="text-[11px] text-gray-500 mt-1 text-center leading-tight cursor-help"
-                title="Calculado contra as aprovadas: Aprovadas ÷ (Aprovadas + Não Autorizado + Cartão Inválido + Cancelado + Outros). Aguardando e abandonos ficam de fora."
+                title="Calculado contra todas as tentativas: Aprovadas ÷ (Aprovadas + Aguardando + Não Autorizado + Cartão Inválido + Cancelado + Outros)."
               >
                 Taxa de<br/>aprovação
               </span>
@@ -120,7 +116,7 @@ export default function CardApprovalChart({ data }: Props) {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0"/>
-                  <span className="text-gray-300">{data!.refused} recusadas</span>
+                  <span className="text-gray-300">{data!.refused} não aprovadas</span>
                 </div>
               </div>
             </div>
