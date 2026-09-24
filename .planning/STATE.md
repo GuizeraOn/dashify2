@@ -2,8 +2,8 @@
 gsd_state_version: "1.0"
 milestone: v2.0
 milestone_name: Webhook Nativo Perfect Pay & Supabase Vendas
-status: in_progress
-last_updated: "2026-09-24T16:26:00.000Z"
+status: completed
+last_updated: "2026-09-24T16:30:00.000Z"
 last_activity: 2026-09-24
 progress:
   total_phases: 4
