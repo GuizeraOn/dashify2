@@ -4,10 +4,9 @@ import { useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 /**
- * De quanto em quanto tempo a planilha e consultada.
+ * De quanto em quanto tempo a base de vendas e consultada.
  *
- * 30s da a sensacao de tempo real sem pesar: e uma leitura da planilha por
- * consulta, e a cota do Sheets e de 60 por minuto por usuario.
+ * 30s da a sensacao de tempo real com custo minimo de processamento no Supabase.
  */
 const POLL_INTERVAL_MS = 30_000;
 
@@ -17,7 +16,7 @@ interface SalesPulse {
 }
 
 /**
- * Vigia a planilha e recarrega o painel quando chega informacao nova.
+ * Vigia a base de vendas no Supabase e recarrega o painel quando chega informacao nova.
  *
  * O caminho obvio seria colocar um refetchInterval na consulta do resumo, mas
  * ai o painel inteiro piscaria a cada 30 segundos mesmo sem nada ter mudado.
@@ -37,7 +36,7 @@ export function useSalesWatcher(onNewData?: () => void) {
     queryKey: ['sales-pulse'],
     queryFn: async () => {
       const response = await fetch('/api/sales-pulse');
-      if (!response.ok) throw new Error('Falha ao consultar a planilha');
+      if (!response.ok) throw new Error('Falha ao consultar o monitor de vendas');
       return response.json();
     },
     refetchInterval: POLL_INTERVAL_MS,

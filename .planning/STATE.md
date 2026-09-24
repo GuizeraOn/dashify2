@@ -7,17 +7,17 @@ last_updated: "2026-09-24T16:26:00.000Z"
 last_activity: 2026-09-24
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 6
-  completed_plans: 5
-  percent: 75
+  completed_plans: 6
+  percent: 100
 ---
 
 # STATE — Dashify
 
 ## Status Atual
 
-- **Milestone ativo:** v2.0 — Webhook Nativo Perfect Pay & Supabase Vendas
+- **Milestone ativo:** v2.0 — Webhook Nativo Perfect Pay & Supabase Vendas (CONCLUÍDO)
 - **Última atualização:** 2026-09-24
 
 ## Progresso por Fase (Milestone v2.0)
@@ -27,7 +27,7 @@ progress:
 | Fase 5 — Modelagem no Supabase e Receptor de Webhook Perfect Pay | 🟢 Concluída (2 planos) | 100% |
 | Fase 6 — Migração de Dados Históricos (Google Sheets ➔ Supabase) | 🟢 Concluída (1 plano) | 100% |
 | Fase 7 — Migração das Rotas Analíticas para o Supabase | 🟢 Concluída (2 planos) | 100% |
-| Fase 8 — Aposentadoria do Google Sheets, Limpeza e Validação | 🟡 Planejada (1 plano) | 0% |
+| Fase 8 — Aposentadoria do Google Sheets, Limpeza e Validação | 🟢 Concluída (1 plano) | 100% |
 
 ## Decisões Técnicas Registradas
 
@@ -40,11 +40,10 @@ progress:
 - **2026-09-24:** Fase 5 concluída: DDL `sales`, tipos TypeScript, parser robusto com 27 testes unitários, liberação no proxy e rota idempotente de webhook.
 - **2026-09-24:** Fase 6 concluída: 1.058 vendas históricas migradas para a tabela `sales` do Supabase com 100% de paridade (723 aprovadas, R$ 62.010,30 de receita líquida).
 - **2026-09-24:** Fase 7 concluída: Todas as 6 rotas analíticas (`/api/sales-pulse`, `/api/summary`, `/api/transactions`, `/api/campaigns`, `/api/reports`, `/api/products`) migradas para o Supabase via `lib/sales-service.ts`. Zero dependência de `@/lib/sheets` nas APIs.
-- **2026-09-24:** Fase 8 planejada em 1 plano: 08-01 (remoção de arquivos legados, desinstalação de googleapis, docs e validação de build).
+- **2026-09-24:** Fase 8 concluída: `lib/sheets.ts` e `check-sheets.js` removidos, `googleapis` desinstalada, documentação e `.env.example` atualizados, `npm run build` gerando bundles de produção sem erros.
 
 ## Current Position
 
-Phase: Phase 8 — Aposentadoria do Google Sheets, Limpeza e Validação
-Plan: Ready to execute (08-01)
-Status: Planned
-Last activity: 2026-09-24 — Phase 8 planned (Plan 08-01)
+Milestone: v2.0 — Webhook Nativo Perfect Pay & Supabase Vendas
+Status: Complete (100%)
+Last activity: 2026-09-24 — Milestone v2.0 successfully finished and validated!

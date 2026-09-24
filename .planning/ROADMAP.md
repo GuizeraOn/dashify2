@@ -9,7 +9,7 @@ Substituição definitiva da leitura do Google Sheets por um receptor nativo de 
 - [x] **Phase 5: Modelagem Supabase e Receptor de Webhook Perfect Pay** - Criar tabela sales, parser dos eventos da Perfect Pay, rota de webhook com validação de token e liberação no proxy.
 - [x] **Phase 6: Migração de Dados Históricos (Google Sheets para Supabase)** - Script de migração one-off importando todas as transações passadas para o Supabase com paridade de totais.
 - [x] **Phase 7: Migração das Rotas Analíticas para o Supabase** - Atualizar summary, transactions, campaigns, reports, products e sales-pulse para consumirem o Supabase.
-- [ ] **Phase 8: Aposentadoria do Google Sheets, Limpeza e Validação** - Remover lib/sheets.ts, dependência googleapis, variáveis legadas e validar fluxo end-to-end.
+- [x] **Phase 8: Aposentadoria do Google Sheets, Limpeza e Validação** - Remover lib/sheets.ts, dependência googleapis, variáveis legadas e validar fluxo end-to-end.
 
 ## Phase Details
 
@@ -65,7 +65,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 08-01: Remoção de Arquivos Legados, Desinstalação do googleapis, Atualização de Docs e Build E2E
+- [x] 08-01: Remoção de Arquivos Legados, Desinstalação do googleapis, Atualização de Docs e Build E2E
 
 ## Progress
 
@@ -74,4 +74,4 @@ Plans:
 | Phase 5: Modelagem Supabase e Receptor de Webhook | 2/2 | Complete | 2026-09-24 |
 | Phase 6: Migração de Dados Históricos | 1/1 | Complete | 2026-09-24 |
 | Phase 7: Migração das Rotas Analíticas | 2/2 | Complete | 2026-09-24 |
-| Phase 8: Aposentadoria do Sheets e Validação | 0/1 | Planned | - |
+| Phase 8: Aposentadoria do Sheets e Validação | 1/1 | Complete | 2026-09-24 |

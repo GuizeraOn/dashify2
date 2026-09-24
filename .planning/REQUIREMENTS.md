@@ -36,9 +36,9 @@ Substituição definitiva da fonte de dados de vendas (Google Sheets) por um rec
 - [ ] **API-06**: Atualizar `GET /api/sales-pulse` para gerar a assinatura leve baseada em `MAX(updated_at)` e `COUNT(*)` da tabela `sales` do Supabase, preservando o funcionamento do hook `useSalesWatcher` sem alterações no frontend.
 
 ### 5. Limpeza e Finalização (CLEAN)
-- [ ] **CLEAN-01**: Remover `lib/sheets.ts`, `check-sheets.js` e desinstalar a biblioteca `googleapis` do `package.json`.
-- [ ] **CLEAN-02**: Atualizar `.env.example`, `.env.local` e `README.md`, documentando a configuração da URL e Token de Webhook da Perfect Pay e removendo as credenciais legadas do Google Service Account.
-- [ ] **CLEAN-03**: Executar testes de build (`npm run build`) e teste funcional de recebimento de webhook com verificação em tempo real no dashboard.
+- [x] **CLEAN-01**: Remover `lib/sheets.ts`, `check-sheets.js` e desinstalar a biblioteca `googleapis` do `package.json`.
+- [x] **CLEAN-02**: Atualizar `.env.example`, `.env.local` e `README.md`, documentando a configuração da URL e Token de Webhook da Perfect Pay e removendo as credenciais legadas do Google Service Account.
+- [x] **CLEAN-03**: Executar testes de build (`npm run build`) e teste funcional de recebimento de webhook com verificação em tempo real no dashboard.
 
 ---
 
@@ -50,4 +50,4 @@ Substituição definitiva da fonte de dados de vendas (Google Sheets) por um rec
 | DB-01, DB-02, DB-03, DB-04 | Phase 5 | Complete |
 | MIG-01, MIG-02, MIG-03 | Phase 6 | Complete |
 | API-01, API-02, API-03, API-04, API-05, API-06 | Phase 7 | Complete |
-| CLEAN-01, CLEAN-02, CLEAN-03 | Phase 8 | Pending |
+| CLEAN-01, CLEAN-02, CLEAN-03 | Phase 8 | Complete |
