@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { parsePerfectPayPayload } from '@/lib/parsers/perfectpay';
-import { getUsdToBrlRate } from '@/lib/currency';
+import { parsePerfectPayPayload, detectCurrency } from '@/lib/parsers/perfectpay';
+import { getExchangeRateToBrl } from '@/lib/currency';
 import type { PerfectPayWebhookPayload } from '@/lib/types';
 
 /**
@@ -55,9 +55,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid payload: could not parse body' }, { status: 400 });
     }
 
-    // Taxa de câmbio USD -> BRL se a moeda for dólar
-    const isUsd = payload?.currency_enum === 2 || payload?.currency_enum_key === 'USD';
-    const fxRate = isUsd ? await getUsdToBrlRate() : 1.0;
+    // Identifica a moeda real do payload (BRL, USD, ARS, COP, MXN, CLP, EUR, etc.)
+    const currency = detectCurrency(payload as PerfectPayWebhookPayload);
+    const fxRate = currency !== 'BRL' ? await getExchangeRateToBrl(currency) : 1.0;
 
     // Normalização do payload para o modelo canônico SalesRow
     const parsedSale = parsePerfectPayPayload(payload as PerfectPayWebhookPayload, fxRate);

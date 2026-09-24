@@ -189,6 +189,30 @@ export function calculateNetRevenue(
 }
 
 /**
+ * Detecta a moeda efetiva do payload.
+ * Dá prioridade a currency_paid (ex: ARS, COP, CLP, MXN, USD) se informado,
+ * senão consulta currency_enum_key ou currency_enum.
+ */
+export function detectCurrency(payload: PerfectPayWebhookPayload): string {
+  const anyPayload = payload as any;
+  const paid = anyPayload?.currency_paid;
+  if (paid && typeof paid === 'string' && paid.trim()) {
+    return paid.trim().toUpperCase();
+  }
+
+  const key = anyPayload?.currency_enum_key;
+  if (key && typeof key === 'string' && key.trim()) {
+    return key.trim().toUpperCase();
+  }
+
+  if (payload.currency_enum === 2) return 'USD';
+  if (payload.currency_enum === 3) return 'EUR';
+  if (payload.currency_enum === 1) return 'BRL';
+
+  return 'BRL';
+}
+
+/**
  * Normaliza o payload bruto do webhook da Perfect Pay para o modelo SalesRow da tabela sales
  */
 export function parsePerfectPayPayload(
@@ -202,8 +226,9 @@ export function parsePerfectPayPayload(
 
   const rawNetRevenue = calculateNetRevenue(rawSaleAmount, payload.commission);
 
-  const isUsd = payload.currency_enum === 2 || payload.currency_enum_key === 'USD';
-  const effectiveRate = isUsd && fxRate > 0 ? fxRate : 1.0;
+  const currency = detectCurrency(payload);
+  const isBrl = currency === 'BRL';
+  const effectiveRate = !isBrl && fxRate > 0 ? fxRate : 1.0;
 
   const grossRevenueBrl = Number((rawSaleAmount * effectiveRate).toFixed(2));
   const netRevenueBrl = Number((rawNetRevenue * effectiveRate).toFixed(2));
@@ -278,6 +303,7 @@ export function parsePerfectPayPayload(
     src: payload.metadata?.src || null,
     raw_payload: {
       ...(payload as Record<string, unknown>),
+      currency,
       fx_rate: effectiveRate,
     },
     updated_at: new Date().toISOString(),
