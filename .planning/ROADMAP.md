@@ -64,11 +64,14 @@ Plans:
   3. Webhook de teste simula ciclo completo de venda refletindo instantaneamente no dashboard.
 **Plans**: 1 plan
 
+Plans:
+- [ ] 08-01: Remoção de Arquivos Legados, Desinstalação do googleapis, Atualização de Docs e Build E2E
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| Phase 5: Modelagem Supabase e Receptor de Webhook | 0/2 | Not started | - |
-| Phase 6: Migração de Dados Históricos | 0/1 | Not started | - |
-| Phase 7: Migração das Rotas Analíticas | 0/2 | Not started | - |
-| Phase 8: Aposentadoria do Sheets e Validação | 0/1 | Not started | - |
+| Phase 5: Modelagem Supabase e Receptor de Webhook | 2/2 | Complete | 2026-09-24 |
+| Phase 6: Migração de Dados Históricos | 1/1 | Complete | 2026-09-24 |
+| Phase 7: Migração das Rotas Analíticas | 2/2 | Complete | 2026-09-24 |
+| Phase 8: Aposentadoria do Sheets e Validação | 0/1 | Planned | - |
