@@ -48,6 +48,6 @@ Substituição definitiva da fonte de dados de vendas (Google Sheets) por um rec
 |-------------|-------|--------|
 | WH-01, WH-02, WH-03, WH-04 | Phase 5 | Complete |
 | DB-01, DB-02, DB-03, DB-04 | Phase 5 | Complete |
-| MIG-01, MIG-02, MIG-03 | Phase 6 | Pending |
+| MIG-01, MIG-02, MIG-03 | Phase 6 | Complete |
 | API-01, API-02, API-03, API-04, API-05, API-06 | Phase 7 | Pending |
 | CLEAN-01, CLEAN-02, CLEAN-03 | Phase 8 | Pending |

@@ -131,6 +131,23 @@ function mapStatus(statusRaw) {
   return { status: 'outro', enumVal: 0 };
 }
 
+async function fetchAllSalesFromSupabase(supabase) {
+  let all = [];
+  let from = 0;
+  const PAGE_SIZE = 1000;
+  while (true) {
+    const { data, error } = await supabase
+      .from('sales')
+      .select('code, status, net_revenue_brl')
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    all.push(...(data || []));
+    if (!data || data.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  return all;
+}
+
 async function main() {
   const isDryRun = process.argv.includes('--dry-run');
   const isVerifyOnly = process.argv.includes('--verify-only');
@@ -173,13 +190,7 @@ async function main() {
   // Se modo verify-only, audita e sai
   if (isVerifyOnly) {
     console.log('\n📊 Executando auditoria de paridade no Supabase...');
-    const { data: sales, error: fetchErr } = await supabase
-      .from('sales')
-      .select('code, status, net_revenue_brl');
-    if (fetchErr) {
-      console.error('❌ Erro ao buscar vendas no Supabase:', fetchErr.message);
-      process.exit(1);
-    }
+    const sales = await fetchAllSalesFromSupabase(supabase);
     const totalCount = sales.length;
     const aprovados = sales.filter(s => s.status === 'aprovado');
     const netBrl = aprovados.reduce((sum, s) => sum + (Number(s.net_revenue_brl) || 0), 0);
@@ -383,15 +394,7 @@ async function main() {
 
   // 7. Auditoria de Paridade Final
   console.log('\n🔍 Realizando auditoria de paridade no Supabase...');
-  const { data: dbSales, error: auditErr } = await supabase
-    .from('sales')
-    .select('code, status, net_revenue_brl');
-
-  if (auditErr) {
-    console.error('❌ Erro na consulta de auditoria:', auditErr.message);
-    process.exit(1);
-  }
-
+  const dbSales = await fetchAllSalesFromSupabase(supabase);
   const dbApproved = dbSales.filter(s => s.status === 'aprovado');
   const dbNetRev = dbApproved.reduce((sum, s) => sum + (Number(s.net_revenue_brl) || 0), 0);
 
