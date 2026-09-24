@@ -7,31 +7,55 @@ import type { PerfectPayWebhookPayload } from '@/lib/types';
  * Receptor de Webhooks da Perfect Pay
  *
  * Recebe postbacks de vendas, pagamentos, aprovações, estornos e cancelamentos.
- * A segurança é validada via token do postback comparado com PERFECTPAY_WEBHOOK_TOKEN.
  * A operação é idempotente (upsert baseado em 'code').
  */
+export async function GET() {
+  return NextResponse.json({
+    status: 'ok',
+    message: 'Perfect Pay Webhook endpoint is active and ready to receive POST notifications.'
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
-    let payload: PerfectPayWebhookPayload;
+    let payload: any;
+    const contentType = request.headers.get('content-type') || '';
+
     try {
-      payload = await request.json();
-    } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-    }
-
-    // 1. Validação de Token de Segurança
-    const expectedToken = process.env.PERFECTPAY_WEBHOOK_TOKEN;
-    if (expectedToken) {
-      if (!payload.token || payload.token !== expectedToken) {
-        return NextResponse.json(
-          { error: 'Unauthorized: invalid or missing webhook token' },
-          { status: 401 }
-        );
+      if (contentType.includes('application/json')) {
+        payload = await request.json();
+      } else if (
+        contentType.includes('application/x-www-form-urlencoded') ||
+        contentType.includes('multipart/form-data')
+      ) {
+        const formData = await request.formData();
+        const obj: Record<string, any> = {};
+        formData.forEach((value, key) => {
+          if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
+            try {
+              obj[key] = JSON.parse(value);
+              return;
+            } catch {}
+          }
+          obj[key] = value;
+        });
+        payload = obj;
+      } else {
+        // Fallback: tenta json, se falhar tenta text -> JSON
+        try {
+          payload = await request.json();
+        } catch {
+          const text = await request.text();
+          payload = JSON.parse(text);
+        }
       }
+    } catch (parseError: any) {
+      console.error('Falha ao processar corpo do webhook:', parseError);
+      return NextResponse.json({ error: 'Invalid payload: could not parse body' }, { status: 400 });
     }
 
-    // 2. Normalização do payload para o modelo canônico SalesRow
-    const parsedSale = parsePerfectPayPayload(payload);
+    // Normalização do payload para o modelo canônico SalesRow
+    const parsedSale = parsePerfectPayPayload(payload as PerfectPayWebhookPayload);
 
     if (!parsedSale.code) {
       return NextResponse.json(
@@ -40,7 +64,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Upsert no Supabase (idempotente)
+    // Upsert no Supabase (idempotente)
     const supabase = getSupabaseAdmin();
     const { error } = await supabase
       .from('sales')

@@ -53,7 +53,6 @@ Todas estão documentadas em [`.env.example`](./.env.example):
 
 | Variável | Onde é usada | Descrição |
 | --- | --- | --- |
-| `PERFECTPAY_WEBHOOK_TOKEN` | servidor | Token secreto configurado na Perfect Pay para autenticar o postback |
 | `NEXT_PUBLIC_SUPABASE_URL` | cliente/servidor | URL do projeto Supabase |
 | `SUPABASE_SERVICE_ROLE_KEY` | **somente servidor** | Chave `service_role` do Supabase para gravação de webhooks e consultas |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | cliente/servidor | Chave anon do Supabase, usada pelo login |
@@ -77,9 +76,8 @@ Para enviar os eventos de vendas automaticamente para o Dashify:
    ```
    https://seu-dominio.vercel.app/api/webhooks/perfectpay
    ```
-3. Defina um token secreto e cadastre o mesmo valor na variável de ambiente `PERFECTPAY_WEBHOOK_TOKEN`.
-4. Selecione os eventos desejados (Venda Aprovada, Boleto Impresso, Cancelamento, Reembolso, Chargeback).
-5. O endpoint valida o token e realiza o upsert idempotente no Supabase de forma imediata.
+3. Selecione os eventos desejados (Venda Aprovada, Boleto Impresso, Pix Gerado, Cancelamento, Reembolso, Chargeback).
+4. O endpoint processa o postback e realiza o upsert idempotente no Supabase de forma imediata.
 
 ---
 
