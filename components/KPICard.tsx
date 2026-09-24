@@ -7,9 +7,10 @@ import { Info } from 'lucide-react';
 interface KPICardProps {
   title: string;
   value: number | null;
-  type?: 'currency' | 'percent' | 'number';
+  type?: 'currency' | 'percent' | 'number' | 'integer';
   tooltip?: string;
   inverseColors?: boolean; // Se true, vermelho é bom e verde é ruim (ex: CPA)
+  neutral?: boolean; // Se true, valor sempre fica branco neutro (ex: métricas de volume/taxa)
   /**
    * Esmaece o card e explica no tooltip por que o numero nao e confiavel no
    * recorte atual. Usado quando ha filtro de pais: o gasto do Meta nao e
@@ -30,6 +31,7 @@ export default function KPICard({
   type = 'currency', 
   tooltip,
   inverseColors = false,
+  neutral = false,
   mutedReason,
   isRefreshing = false
 }: KPICardProps) {
@@ -45,6 +47,8 @@ export default function KPICard({
       displayValue = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
     } else if (type === 'percent') {
       displayValue = `${value.toFixed(2)}%`;
+    } else if (type === 'integer') {
+      displayValue = new Intl.NumberFormat('pt-BR').format(Math.round(value));
     } else {
       displayValue = value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
@@ -59,8 +63,22 @@ export default function KPICard({
     colorClass = inverseColors ? 'text-red-500' : 'text-green-500';
   }
 
-  // Se o título for 'Gastos com Anúncios' ou similar que não tem cor boa/ruim definida:
-  if (title.toLowerCase().includes('gastos') || title.toLowerCase().includes('faturamento') || title.toLowerCase().includes('pendentes') || title.toLowerCase().includes('cpa')) {
+  // Se for métrica neutra ou título que não tem bom/ruim binário:
+  const t = title.toLowerCase();
+  if (
+    neutral ||
+    t.includes('gastos') ||
+    t.includes('faturamento') ||
+    t.includes('pendentes') ||
+    t.includes('cpa') ||
+    t.includes('resultados') ||
+    t.includes('checkout') ||
+    t.includes('ic') ||
+    t.includes('cpc') ||
+    t.includes('ctr') ||
+    t.includes('connect') ||
+    t.includes('cpm')
+  ) {
     colorClass = 'text-white';
   }
 

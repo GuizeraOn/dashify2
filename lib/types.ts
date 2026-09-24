@@ -165,4 +165,13 @@ export interface KPIs {
   pending_revenue: number;
   refunded_revenue: number;
   refunded_count: number;
+  // Métricas gerais de campanha e PerfectPay
+  results: number;
+  checkout_conversion: number | null;
+  initiate_checkout: number;
+  cost_per_ic: number | null;
+  cpc: number | null;
+  ctr: number | null;
+  connect_rate: number | null;
+  cpm: number | null;
 }

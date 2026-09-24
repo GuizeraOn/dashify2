@@ -99,9 +99,10 @@ export default function DashboardPage() {
     key: string;
     title: string;
     value: number | null;
-    type?: 'currency' | 'percent' | 'number';
+    type?: 'currency' | 'percent' | 'number' | 'integer';
     tooltip: string;
     inverseColors?: boolean;
+    neutral?: boolean;
     /** Deriva do gasto do Meta, que nao e separado por pais. */
     dependsOnSpend?: boolean;
   }> = [
@@ -170,6 +171,77 @@ export default function DashboardPage() {
       inverseColors: true,
       tooltip: `Soma do Faturamento Bruto de vendas reembolsadas/estornadas${kpis?.refunded_count ? ` (${kpis.refunded_count} venda${kpis.refunded_count !== 1 ? 's' : ''})` : ''}`,
     },
+    {
+      key: 'kpi-results',
+      title: 'Resultados (Vendas)',
+      value: kpis?.results ?? null,
+      type: 'integer',
+      neutral: true,
+      tooltip: 'Quantidade de vendas com pagamento aprovado (direto da PerfectPay)',
+    },
+    {
+      key: 'kpi-checkout_conv',
+      dependsOnSpend: true,
+      title: 'Conversão de Checkout',
+      value: kpis?.checkout_conversion ?? null,
+      type: 'percent',
+      neutral: true,
+      tooltip: 'Taxa de conversão: Vendas Aprovadas (PerfectPay) / Checkouts Iniciados (Meta) * 100',
+    },
+    {
+      key: 'kpi-ics',
+      dependsOnSpend: true,
+      title: 'Checkouts Iniciados (ICs)',
+      value: kpis?.initiate_checkout ?? null,
+      type: 'integer',
+      neutral: true,
+      tooltip: 'Total de checkouts iniciados registrados nas campanhas do Meta Ads',
+    },
+    {
+      key: 'kpi-cost_per_ic',
+      dependsOnSpend: true,
+      title: 'Custo por IC',
+      value: kpis?.cost_per_ic ?? null,
+      type: 'currency',
+      neutral: true,
+      tooltip: 'Custo médio por checkout iniciado: Gastos no Meta / ICs',
+    },
+    {
+      key: 'kpi-cpc',
+      dependsOnSpend: true,
+      title: 'CPC',
+      value: kpis?.cpc ?? null,
+      type: 'currency',
+      neutral: true,
+      tooltip: 'Custo médio por clique no link: Gastos no Meta / Cliques no link',
+    },
+    {
+      key: 'kpi-ctr',
+      dependsOnSpend: true,
+      title: 'CTR',
+      value: kpis?.ctr ?? null,
+      type: 'percent',
+      neutral: true,
+      tooltip: 'Taxa de cliques: Cliques no link / Impressões * 100 (Meta Ads)',
+    },
+    {
+      key: 'kpi-connect_rate',
+      dependsOnSpend: true,
+      title: 'Connect Rate',
+      value: kpis?.connect_rate ?? null,
+      type: 'percent',
+      neutral: true,
+      tooltip: 'Taxa de conexão: Visitas à Página / Cliques no link * 100 (Retenção de carregamento)',
+    },
+    {
+      key: 'kpi-cpm',
+      dependsOnSpend: true,
+      title: 'CPM',
+      value: kpis?.cpm ?? null,
+      type: 'currency',
+      neutral: true,
+      tooltip: 'Custo por mil impressões: (Gastos / Impressões) * 1.000 (Meta Ads)',
+    },
   ];
 
   return (
@@ -188,6 +260,7 @@ export default function DashboardPage() {
                 type={item.type}
                 tooltip={item.tooltip}
                 inverseColors={item.inverseColors}
+                neutral={item.neutral}
                 isRefreshing={isRefreshing}
                 mutedReason={
                   country && item.dependsOnSpend

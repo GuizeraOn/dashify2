@@ -48,12 +48,31 @@ export function calculateKPIs(metaData: MetaRow[], vendasData: VendasRow[], fron
   );
   const pendingRevenue = pendingVendas.reduce((sum, row) => sum + (row.gross_revenue_brl || 0), 0);
 
-  // 9. Vendas Reembolsadas
   const refundedVendas = vendasData.filter(row => 
     ['reembolsado', 'reembolsada', 'estornado', 'estornada', 'refunded'].includes(row.status.toLowerCase().trim())
   );
   const refundedRevenue = refundedVendas.reduce((sum, row) => sum + (row.gross_revenue_brl || 0), 0);
   const refundedCount = refundedVendas.length;
+
+  // 10. Resultados (Vendas Aprovadas direto da PerfectPay)
+  const results = approvedVendas.length;
+
+  // 11. Métricas Gerais de Campanha (Meta Ads) e Conversão de Checkout
+  const totalICs = metaData.reduce((sum, row: any) => sum + (Number(row.initiate_checkout) || 0), 0);
+  const checkoutConversion = totalICs > 0 ? (results / totalICs) * 100 : null;
+  const costPerIC = totalICs > 0 ? spend / totalICs : null;
+
+  const totalImpressions = metaData.reduce((sum, row) => sum + (Number(row.impressions) || 0), 0);
+  const totalClicks = metaData.reduce((sum, row) => sum + (Number(row.clicks) || 0), 0);
+  const totalLinkClicks = metaData.reduce((sum, row: any) => sum + (Number(row.link_clicks) || 0), 0);
+  const effectiveClicks = totalLinkClicks > 0 ? totalLinkClicks : totalClicks;
+
+  const cpc = effectiveClicks > 0 ? spend / effectiveClicks : null;
+  const ctr = totalImpressions > 0 ? (effectiveClicks / totalImpressions) * 100 : null;
+
+  const totalLPV = metaData.reduce((sum, row: any) => sum + (Number(row.landing_page_views) || 0), 0);
+  const connectRate = effectiveClicks > 0 ? (totalLPV / effectiveClicks) * 100 : null;
+  const cpm = totalImpressions > 0 ? (spend / totalImpressions) * 1000 : null;
 
   return {
     spend,
@@ -66,6 +85,14 @@ export function calculateKPIs(metaData: MetaRow[], vendasData: VendasRow[], fron
     pending_revenue: pendingRevenue,
     refunded_revenue: refundedRevenue,
     refunded_count: refundedCount,
+    results,
+    checkout_conversion: checkoutConversion,
+    initiate_checkout: totalICs,
+    cost_per_ic: costPerIC,
+    cpc,
+    ctr,
+    connect_rate: connectRate,
+    cpm,
   };
 }
 
