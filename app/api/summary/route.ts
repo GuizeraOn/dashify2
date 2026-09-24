@@ -1,10 +1,9 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { getSheetsClient, getSpreadsheetId } from '@/lib/sheets';
-import { parseVendas } from '@/lib/parsers/vendas';
 import { calculateKPIs, filterVendasByDate } from '@/lib/kpis';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { fetchMetaInsights } from '@/lib/meta-insights';
 import { resolvePeriod } from '@/lib/dates';
+import { fetchSales } from '@/lib/sales-service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,15 +22,9 @@ export async function GET(request: NextRequest) {
       dateEnd: searchParams.get('dateEnd') || undefined,
     });
 
-    const sheets = await getSheetsClient();
-    const spreadsheetId = getSpreadsheetId();
-
-    // Leitura paginada: no nivel de anuncio a janela passa do limite de 1.000
-    // linhas por consulta do PostgREST, que corta sem avisar (ver
-    // lib/meta-insights.ts).
-    const [metaRows, vendasResponse, settingsResult] = await Promise.all([
+    const [metaRows, vendasRows, settingsResult] = await Promise.all([
       fetchMetaInsights(dateStart, dateEnd),
-      sheets.spreadsheets.values.get({ spreadsheetId, range: 'db_vendas!A:W' }),
+      fetchSales({ dateStart, dateEnd }),
       getSupabaseAdmin().from('app_settings').select('value').eq('key', 'front_products').single()
     ]);
 
@@ -39,10 +32,7 @@ export async function GET(request: NextRequest) {
     const frontProducts = settingsResult.data?.value || [];
 
     let metaData = metaRows;
-    let vendasData = parseVendas(vendasResponse.data.values || []);
-
-    // Meta data is already date filtered by Supabase
-    vendasData = filterVendasByDate(vendasData, dateStart, dateEnd);
+    let vendasData = filterVendasByDate(vendasRows, dateStart, dateEnd);
 
     // Extract unique products before filtering to populate the dropdown
     const available_products = Array.from(new Set(vendasData.map(v => v.produto).filter(Boolean))).sort();

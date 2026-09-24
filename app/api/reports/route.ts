@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { resolvePeriod } from '@/lib/dates';
-import { getSheetsClient, getSpreadsheetId } from '@/lib/sheets';
-import { parseVendas } from '@/lib/parsers/vendas';
+import { fetchSales } from '@/lib/sales-service';
 
 export async function GET(request: Request) {
   try {
@@ -17,32 +16,11 @@ export async function GET(request: Request) {
       dateEnd: searchParams.get('dateEnd') || undefined,
     });
 
-    const sheets = await getSheetsClient();
-    const spreadsheetId = getSpreadsheetId();
-
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: 'db_vendas!A:W',
+    const vendasData = await fetchSales({
+      dateStart,
+      dateEnd,
+      products: products.length > 0 ? products : undefined,
     });
-
-    let vendasData = parseVendas(response.data.values || []);
-
-    // Filter Date
-    if (dateStart || dateEnd) {
-      vendasData = vendasData.filter(row => {
-        if (!row.date) return false;
-        const dateStr = row.date.split(' ')[0]; 
-        const rowDate = new Date(dateStr.split('/').reverse().join('-')).getTime();
-        const start = dateStart ? new Date(dateStart).getTime() : -Infinity;
-        const end = dateEnd ? new Date(dateEnd).getTime() : Infinity;
-        return rowDate >= start && rowDate <= end;
-      });
-    }
-    
-    // Filter Product
-    if (products.length > 0) {
-      vendasData = vendasData.filter(row => products.includes(row.produto));
-    }
 
     // 1. Heatmap Data (Count of sales by DayOfWeek and HourOfDay)
     // Structure: Array of { day: 0-6 (0=Sun), hour: 0-23, count: number }
