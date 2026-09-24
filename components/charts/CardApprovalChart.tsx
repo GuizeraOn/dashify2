@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import { useMemo } from 'react';
 import { CreditCard } from 'lucide-react';
+import { formatStatus } from '@/lib/status-helpers';
 
 interface CardApprovalStats {
   approved: number;
@@ -22,32 +23,49 @@ interface Props {
   data?: CardApprovalStats;
 }
 
-// Cores por status normalizado
-const STATUS_COLORS: Record<string, string> = {
-  'aprovado':           '#22c55e',
-  'cancelado':          '#ef4444',
-  'recusado':           '#ef4444',
-  'recusada':           '#ef4444',
-  'chargeback':         '#f97316',
-  'aguardando pagamento': '#facc15',
-  'expirado':           '#6b7280',
-  'reembolsado':        '#8b5cf6',
-};
-
-function getColor(status: string): string {
-  const key = status.toLowerCase().trim();
-  return STATUS_COLORS[key] ?? '#64748b';
+interface PieEntry {
+  name: string;
+  value: number;
+  pct: string;
+  color: string;
+  rawMessages: string[];
 }
 
 export default function CardApprovalChart({ data }: Props) {
-  const pieData = useMemo(() => {
+  const pieData = useMemo<PieEntry[]>(() => {
     if (!data || data.total === 0) return [];
-    return data.breakdown.map(item => ({
-      name: item.status,
-      value: item.count,
-      pct: data.total > 0 ? ((item.count / data.total) * 100).toFixed(1) : '0',
-      color: getColor(item.status),
-    }));
+
+    // Agrupa e simplifica os status/erros técnicos usando formatStatus
+    const groups: Record<
+      string,
+      { label: string; count: number; color: string; rawMessages: string[] }
+    > = {};
+
+    data.breakdown.forEach((item) => {
+      const formatted = formatStatus(item.status);
+      if (!groups[formatted.label]) {
+        groups[formatted.label] = {
+          label: formatted.label,
+          count: 0,
+          color: formatted.color,
+          rawMessages: [],
+        };
+      }
+      groups[formatted.label].count += item.count;
+      if (item.status && !groups[formatted.label].rawMessages.includes(item.status)) {
+        groups[formatted.label].rawMessages.push(item.status);
+      }
+    });
+
+    return Object.values(groups)
+      .sort((a, b) => b.count - a.count)
+      .map((g) => ({
+        name: g.label,
+        value: g.count,
+        pct: data.total > 0 ? ((g.count / data.total) * 100).toFixed(1) : '0',
+        color: g.color,
+        rawMessages: g.rawMessages,
+      }));
   }, [data]);
 
   const noData = !data || data.total === 0;
@@ -116,11 +134,43 @@ export default function CardApprovalChart({ data }: Props) {
                     ))}
                   </Pie>
                   <RechartsTooltip
-                    contentStyle={{ backgroundColor: '#242424', borderColor: '#333', color: '#fff', borderRadius: '8px', fontSize: '12px' }}
-                    formatter={(value: any, name: any, props: any) => [
-                      `${value} (${props.payload.pct}%)`,
-                      props.payload.name,
-                    ]}
+                    content={({ active, payload }) => {
+                      if (!active || !payload || !payload.length) return null;
+                      const entry = payload[0].payload as PieEntry;
+                      const hasRawDetail =
+                        entry.rawMessages &&
+                        entry.rawMessages.some(
+                          (m) => m.toLowerCase().trim() !== entry.name.toLowerCase().trim()
+                        );
+
+                      return (
+                        <div className="bg-[#1E1E1E] border border-[#333] p-2.5 rounded-lg shadow-xl text-xs max-w-xs z-50">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: entry.color }}
+                            />
+                            <span className="font-semibold text-white">{entry.name}</span>
+                            <span className="text-gray-400">({entry.pct}%)</span>
+                          </div>
+                          <div className="text-gray-300 font-medium">
+                            {entry.value} {entry.value === 1 ? 'transação' : 'transações'}
+                          </div>
+                          {hasRawDetail && (
+                            <div className="mt-2 pt-2 border-t border-[#333] text-[11px] text-gray-400">
+                              <span className="text-gray-500 font-medium block mb-1">
+                                Motivo do Gateway:
+                              </span>
+                              {entry.rawMessages.map((msg, i) => (
+                                <p key={i} className="leading-snug break-words italic text-gray-300 mb-1">
+                                  "{msg}"
+                                </p>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -128,13 +178,33 @@ export default function CardApprovalChart({ data }: Props) {
           </div>
 
           {/* Bottom: full breakdown legend */}
-          <div className="flex-shrink-0 flex flex-wrap gap-x-3 gap-y-1 pt-1 border-t border-[#2a2a2a] mt-1">
-            {pieData.map((entry, idx) => (
-              <div key={idx} className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
-                <span className="text-gray-400 text-[11px]">{entry.name} ({entry.pct}%)</span>
-              </div>
-            ))}
+          <div className="flex-shrink-0 flex flex-wrap gap-x-3 gap-y-1.5 pt-1.5 border-t border-[#2a2a2a] mt-1 max-h-20 overflow-y-auto">
+            {pieData.map((entry, idx) => {
+              const hasRawDetail =
+                entry.rawMessages &&
+                entry.rawMessages.some(
+                  (m) => m.toLowerCase().trim() !== entry.name.toLowerCase().trim()
+                );
+              const tooltipText = hasRawDetail
+                ? `${entry.name} (${entry.pct}%)\nMotivo do Gateway:\n${entry.rawMessages.join('\n')}`
+                : `${entry.name} (${entry.pct}%)`;
+
+              return (
+                <div
+                  key={idx}
+                  title={tooltipText}
+                  className="flex items-center gap-1.5 cursor-help transition-opacity hover:opacity-100 group"
+                >
+                  <span
+                    className="w-2 h-2 rounded-full flex-shrink-0 shadow-sm"
+                    style={{ backgroundColor: entry.color }}
+                  />
+                  <span className="text-gray-400 group-hover:text-gray-200 text-[11px] transition-colors">
+                    {entry.name} <span className="text-gray-500">({entry.pct}%)</span>
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </>
       )}
