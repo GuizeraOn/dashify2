@@ -14,6 +14,11 @@ import { isEmailAllowed } from '@/lib/supabase-auth';
  * navegador para ler o faturamento inteiro sem passar pelo login.
  */
 export async function proxy(request: NextRequest) {
+  // Webhooks externos usam tokens próprios no payload e não possuem sessão de usuário Supabase.
+  if (request.nextUrl.pathname.startsWith('/api/webhooks/')) {
+    return NextResponse.next();
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 

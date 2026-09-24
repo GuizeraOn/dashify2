@@ -6,7 +6,7 @@ Substituição definitiva da leitura do Google Sheets por um receptor nativo de 
 
 ## Phases
 
-- [ ] **Phase 5: Modelagem Supabase e Receptor de Webhook Perfect Pay** - Criar tabela sales, parser dos eventos da Perfect Pay, rota de webhook com validação de token e liberação no proxy.
+- [x] **Phase 5: Modelagem Supabase e Receptor de Webhook Perfect Pay** - Criar tabela sales, parser dos eventos da Perfect Pay, rota de webhook com validação de token e liberação no proxy.
 - [ ] **Phase 6: Migração de Dados Históricos (Google Sheets para Supabase)** - Script de migração one-off importando todas as transações passadas para o Supabase com paridade de totais.
 - [ ] **Phase 7: Migração das Rotas Analíticas para o Supabase** - Atualizar summary, transactions, campaigns, reports, products e sales-pulse para consumirem o Supabase.
 - [ ] **Phase 8: Aposentadoria do Google Sheets, Limpeza e Validação** - Remover lib/sheets.ts, dependência googleapis, variáveis legadas e validar fluxo end-to-end.
@@ -25,8 +25,8 @@ Substituição definitiva da leitura do Google Sheets por um receptor nativo de 
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-01: Modelagem Supabase (supabase_vendas.sql), Tipagens (lib/types.ts) e Parser Perfect Pay (lib/parsers/perfectpay.ts)
-- [ ] 05-02: Rota de Webhook (/api/webhooks/perfectpay), Liberação no proxy.ts e Testes Automatizados
+- [x] 05-01: Modelagem Supabase (supabase_vendas.sql), Tipagens (lib/types.ts) e Parser Perfect Pay (lib/parsers/perfectpay.ts)
+- [x] 05-02: Rota de Webhook (/api/webhooks/perfectpay), Liberação no proxy.ts e Testes Automatizados
 
 ### Phase 6: Migração de Dados Históricos (Google Sheets para Supabase)
 **Goal**: Transferir todas as vendas da planilha atual para a nova tabela do Supabase mantendo histórico inalterado.
