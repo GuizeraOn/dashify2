@@ -13,6 +13,7 @@ export interface SummaryData {
     approved: number;
     refused: number;
     total: number;
+    resolved?: number;
     approval_rate: number;
     breakdown: { status: string; count: number }[];
   };

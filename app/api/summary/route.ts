@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { fetchMetaInsights } from '@/lib/meta-insights';
 import { resolvePeriod } from '@/lib/dates';
 import { fetchSales } from '@/lib/sales-service';
+import { formatStatus } from '@/lib/status-helpers';
 
 export async function GET(request: NextRequest) {
   try {
@@ -85,26 +86,38 @@ export async function GET(request: NextRequest) {
     
     const payment_stats = Object.entries(paymentMap).map(([name, value]) => ({ name, value }));
 
-    // Card approval stats: aprovadas vs recusadas (todas as vendas cartão/crédito)
+    // Card approval stats: aprovadas vs recusadas reais (tentativas resolvidas no gateway)
     const CARD_KEYWORDS = ['cartão', 'cartao', 'credit', 'crédito', 'credito'];
-    const isCardPayment = (pm: string) => CARD_KEYWORDS.some(kw => pm.toLowerCase().includes(kw));
+    const isCardPayment = (pm: string) => CARD_KEYWORDS.some(kw => (pm || '').toLowerCase().includes(kw));
 
     const cardVendas = vendasData.filter(row => isCardPayment(row.payment_method));
-    const cardApproved = cardVendas.filter(row => row.status.toLowerCase().trim() === 'aprovado').length;
-    const cardTotal = cardVendas.length;
-    const cardRefused = cardTotal - cardApproved;
-    const cardApprovalRate = cardTotal > 0 ? (cardApproved / cardTotal) * 100 : 0;
 
-    // Breakdown por status do cartão
+    let cardApproved = 0;
+    let cardRefused = 0;
     const cardStatusMap: Record<string, number> = {};
+
     cardVendas.forEach(row => {
+      const formatted = formatStatus(row.status);
       const s = row.status.trim() || 'Desconhecido';
       cardStatusMap[s] = (cardStatusMap[s] || 0) + 1;
+
+      if (formatted.category === 'approved') {
+        cardApproved += 1;
+      } else if (formatted.category === 'refused' || formatted.category === 'cancelled') {
+        cardRefused += 1;
+      }
+      // 'pending' (aguardando) e 'other' (abandono de checkout) aparecem nas fatias do gráfico,
+      // mas não são recusas da adquirente/banco, portanto não reduzem a taxa de aprovação
     });
+
+    const cardResolved = cardApproved + cardRefused;
+    const cardApprovalRate = cardResolved > 0 ? (cardApproved / cardResolved) * 100 : 0;
+
     const card_approval_stats = {
       approved: cardApproved,
       refused: cardRefused,
-      total: cardTotal,
+      total: cardVendas.length,
+      resolved: cardResolved,
       approval_rate: Math.round(cardApprovalRate * 10) / 10,
       breakdown: Object.entries(cardStatusMap).map(([status, count]) => ({ status, count }))
     };
@@ -183,16 +196,12 @@ export async function GET(request: NextRequest) {
      * Reembolsado conta como aprovado: a compra passou no checkout, que e o
      * que esta sendo medido aqui. O estorno veio depois, e ja tem card proprio.
      */
-    const APPROVED_STATUSES = ['aprovado', 'reembolsado'];
-    const REFUSED_STATUSES = ['cancelado', 'recusado', 'estornado'];
-
     const approvalTotals: Record<string, { approved: number; refused: number }> = {};
 
     vendasBeforeCountryFilter.forEach(row => {
-      const status = row.status.toLowerCase().trim();
-
-      const isApproved = APPROVED_STATUSES.includes(status);
-      const isRefused = REFUSED_STATUSES.includes(status);
+      const formatted = formatStatus(row.status);
+      const isApproved = formatted.category === 'approved' || formatted.category === 'refunded';
+      const isRefused = formatted.category === 'refused' || formatted.category === 'cancelled';
       if (!isApproved && !isRefused) return;
 
       const name = row.country || 'Desconhecido';

@@ -15,6 +15,7 @@ interface CardApprovalStats {
   approved: number;
   refused: number;
   total: number;
+  resolved?: number;
   approval_rate: number;
   breakdown: { status: string; count: number }[];
 }
@@ -85,7 +86,11 @@ export default function CardApprovalChart({ data }: Props) {
           <span className="text-sm text-gray-300 font-medium">Taxa de Aprovação — Cartão</span>
         </div>
         {data && data.total > 0 && (
-          <span className="text-xs text-gray-500">{data.total} transações</span>
+          <span className="text-xs text-gray-500">
+            {data.resolved !== undefined && data.resolved !== data.total
+              ? `${data.resolved} processadas (${data.total} total)`
+              : `${data.total} transações`}
+          </span>
         )}
       </div>
 
@@ -102,7 +107,12 @@ export default function CardApprovalChart({ data }: Props) {
               <span className={`text-4xl font-bold tabular-nums ${rateColor}`}>
                 {data!.approval_rate}%
               </span>
-              <span className="text-[11px] text-gray-500 mt-1 text-center leading-tight">Taxa de<br/>aprovação</span>
+              <span
+                className="text-[11px] text-gray-500 mt-1 text-center leading-tight cursor-help"
+                title="Calculado sobre tentativas processadas: Aprovadas ÷ (Aprovadas + Recusadas). Aguardando e abandonos não afetam a taxa de gateway."
+              >
+                Taxa de<br/>aprovação
+              </span>
               <div className="mt-3 flex flex-col gap-1 text-xs">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"/>
