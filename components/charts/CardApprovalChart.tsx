@@ -109,7 +109,7 @@ export default function CardApprovalChart({ data }: Props) {
               </span>
               <span
                 className="text-[11px] text-gray-500 mt-1 text-center leading-tight cursor-help"
-                title="Calculado sobre tentativas processadas: Aprovadas ÷ (Aprovadas + Recusadas). Aguardando e abandonos não afetam a taxa de gateway."
+                title="Calculado contra as aprovadas: Aprovadas ÷ (Aprovadas + Não Autorizado + Cartão Inválido + Cancelado + Outros). Aguardando e abandonos ficam de fora."
               >
                 Taxa de<br/>aprovação
               </span>

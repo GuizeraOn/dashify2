@@ -92,6 +92,21 @@ export async function GET(request: NextRequest) {
 
     const cardVendas = vendasData.filter(row => isCardPayment(row.payment_method));
 
+    // Determina se um status conta como recusa/falha (Não Autorizado, Cartão Inválido, Cancelado, Outros, etc.)
+    const isRefusalStatus = (formatted: ReturnType<typeof formatStatus>) => {
+      if (formatted.category === 'refused' || formatted.category === 'cancelled') return true;
+      if (formatted.label === 'Outros' || formatted.original.toLowerCase() === 'outro' || formatted.original.toLowerCase() === 'outros') return true;
+      if (
+        formatted.category !== 'approved' &&
+        formatted.category !== 'pending' &&
+        formatted.category !== 'refunded' &&
+        formatted.label !== 'Abandono'
+      ) {
+        return true;
+      }
+      return false;
+    };
+
     let cardApproved = 0;
     let cardRefused = 0;
     const cardStatusMap: Record<string, number> = {};
@@ -103,11 +118,11 @@ export async function GET(request: NextRequest) {
 
       if (formatted.category === 'approved') {
         cardApproved += 1;
-      } else if (formatted.category === 'refused' || formatted.category === 'cancelled') {
+      } else if (isRefusalStatus(formatted)) {
         cardRefused += 1;
       }
-      // 'pending' (aguardando) e 'other' (abandono de checkout) aparecem nas fatias do gráfico,
-      // mas não são recusas da adquirente/banco, portanto não reduzem a taxa de aprovação
+      // 'pending' (aguardando) e 'Abandono' aparecem nas fatias do gráfico,
+      // mas não são falhas resolvidas no gateway, portanto não reduzem a taxa de aprovação
     });
 
     const cardResolved = cardApproved + cardRefused;
@@ -201,7 +216,7 @@ export async function GET(request: NextRequest) {
     vendasBeforeCountryFilter.forEach(row => {
       const formatted = formatStatus(row.status);
       const isApproved = formatted.category === 'approved' || formatted.category === 'refunded';
-      const isRefused = formatted.category === 'refused' || formatted.category === 'cancelled';
+      const isRefused = isRefusalStatus(formatted);
       if (!isApproved && !isRefused) return;
 
       const name = row.country || 'Desconhecido';
