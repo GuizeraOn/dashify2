@@ -38,12 +38,16 @@ export default function Header() {
   // nome de produto e texto livre, e qualquer separador escolhido acabaria
   // aparecendo dentro de um nome algum dia.
   const selectedProducts = searchParams.getAll('product');
+  const country = searchParams.get('country') || undefined;
+  const campaign = searchParams.get('campaign') || undefined;
   const dateStart = searchParams.get('dateStart') || undefined;
   const dateEnd = searchParams.get('dateEnd') || undefined;
 
   // React Query vai reaproveitar o cache gerado pela page.tsx
   const { data } = useSummary({
     period: currentPeriod,
+    campaign,
+    country,
     dateStart,
     dateEnd,
     products: selectedProducts.length > 0 ? selectedProducts : undefined,
@@ -73,7 +77,8 @@ export default function Header() {
       params.delete('dateStart');
       params.delete('dateEnd');
     }
-    router.push(`${pathname}?${params.toString()}`);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    queryClient.invalidateQueries();
   };
 
   const handleCustomRange = (range: { dateStart: string; dateEnd: string }) => {
@@ -82,14 +87,16 @@ export default function Header() {
     params.set('period', 'custom');
     params.set('dateStart', range.dateStart);
     params.set('dateEnd', range.dateEnd);
-    router.push(`${pathname}?${params.toString()}`);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    queryClient.invalidateQueries();
   };
 
   const handleProductsChange = (next: string[]) => {
     const params = new URLSearchParams(searchParams.toString());
     params.delete('product');
     next.forEach((value) => params.append('product', value));
-    router.push(`${pathname}?${params.toString()}`);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    queryClient.invalidateQueries();
   };
 
   // Sem a linha "Qualquer": no MultiSelect ela e a propria lista vazia, e vem
