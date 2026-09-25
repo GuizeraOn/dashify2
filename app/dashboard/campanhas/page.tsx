@@ -21,10 +21,12 @@ const LEVEL_OPTIONS: { value: CampaignLevel; label: string; utm: string }[] = [
 export default function CampanhasPage() {
   const searchParams = useSearchParams();
   const period = searchParams.get('period') || 'today';
+  const dateStart = searchParams.get('dateStart') || undefined;
+  const dateEnd = searchParams.get('dateEnd') || undefined;
 
   const [level, setLevel] = useState<CampaignLevel>('campaign');
 
-  const { data, isLoading, isError, isFetching } = useCampaigns({ period, level });
+  const { data, isLoading, isError, isFetching } = useCampaigns({ period, level, dateStart, dateEnd });
 
   /**
    * O nivel que a tabela esta mostrando e o da RESPOSTA, nao o do clique.

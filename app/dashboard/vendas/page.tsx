@@ -12,8 +12,10 @@ export default function VendasPage() {
   const searchParams = useSearchParams();
   const period = searchParams.get('period') || 'today';
   const products = searchParams.getAll('product');
+  const dateStart = searchParams.get('dateStart') || undefined;
+  const dateEnd = searchParams.get('dateEnd') || undefined;
 
-  const { data, isLoading, isError } = useTransactions({ period, products });
+  const { data, isLoading, isError } = useTransactions({ period, products, dateStart, dateEnd });
 
   // Local Filter States
   const [filterStatus, setFilterStatus] = useState<string>('qualquer');

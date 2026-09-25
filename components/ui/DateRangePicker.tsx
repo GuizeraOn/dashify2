@@ -10,6 +10,8 @@ interface Props {
   /** Datas atuais no formato YYYY-MM-DD, como vivem na URL. */
   dateStart?: string;
   dateEnd?: string;
+  /** Abre o popover automaticamente na montagem */
+  autoOpen?: boolean;
   /** Chamado ao aplicar; datas tambem em YYYY-MM-DD. */
   onApply: (range: { dateStart: string; dateEnd: string }) => void;
 }
@@ -36,8 +38,8 @@ function formatLabel(date?: Date): string {
   return date ? date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
 }
 
-export default function DateRangePicker({ dateStart, dateEnd, onApply }: Props) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function DateRangePicker({ dateStart, dateEnd, autoOpen, onApply }: Props) {
+  const [isOpen, setIsOpen] = useState(autoOpen ?? false);
   const [range, setRange] = useState<DateRange | undefined>({
     from: parseDay(dateStart),
     to: parseDay(dateEnd),
@@ -71,16 +73,21 @@ export default function DateRangePicker({ dateStart, dateEnd, onApply }: Props) 
 
   const label =
     range?.from && range?.to
-      ? `${formatLabel(range.from)} — ${formatLabel(range.to)}`
+      ? formatDay(range.from) === formatDay(range.to)
+        ? formatLabel(range.from)
+        : `${formatLabel(range.from)} — ${formatLabel(range.to)}`
       : range?.from
-        ? `${formatLabel(range.from)} — selecione o fim`
+        ? formatLabel(range.from)
         : 'Escolher datas';
 
-  const canApply = Boolean(range?.from && range?.to);
+  const canApply = Boolean(range?.from);
 
   const handleApply = () => {
-    if (!range?.from || !range?.to) return;
-    onApply({ dateStart: formatDay(range.from), dateEnd: formatDay(range.to) });
+    if (!range?.from) return;
+    const start = range.from;
+    const end = range.to || range.from;
+    const [dStart, dEnd] = start <= end ? [start, end] : [end, start];
+    onApply({ dateStart: formatDay(dStart), dateEnd: formatDay(dEnd) });
     setIsOpen(false);
   };
 

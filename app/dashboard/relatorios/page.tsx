@@ -11,8 +11,10 @@ export default function RelatoriosPage() {
   const searchParams = useSearchParams();
   const period = searchParams.get('period') || 'today';
   const products = searchParams.getAll('product');
+  const dateStart = searchParams.get('dateStart') || undefined;
+  const dateEnd = searchParams.get('dateEnd') || undefined;
 
-  const { data, isLoading, isError } = useReports({ period, products });
+  const { data, isLoading, isError } = useReports({ period, products, dateStart, dateEnd });
 
   if (isError) {
     return (

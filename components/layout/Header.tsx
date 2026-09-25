@@ -6,6 +6,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { Select } from '../ui/Select';
 import { MultiSelect } from '../ui/MultiSelect';
 import DateRangePicker from '../ui/DateRangePicker';
+import { resolvePeriod, startOfToday, formatDay } from '@/lib/dates';
 import { useSummary } from '@/hooks/useSummary';
 import { useSalesWatcher } from '@/hooks/useSalesWatcher';
 import { useRefreshStore } from '@/store/refreshStore';
@@ -30,6 +31,7 @@ export default function Header() {
   // Compartilhado com os cards: eles escondem os numeros enquanto isto durar.
   const { isRefreshing, setRefreshing } = useRefreshStore();
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
+  const [autoOpenCustom, setAutoOpenCustom] = useState(false);
 
   const currentPeriod = searchParams.get('period') || 'today';
   // Repetido na URL (?product=A&product=B) em vez de separado por virgula:
@@ -40,7 +42,12 @@ export default function Header() {
   const dateEnd = searchParams.get('dateEnd') || undefined;
 
   // React Query vai reaproveitar o cache gerado pela page.tsx
-  const { data } = useSummary({ period: currentPeriod, dateStart, dateEnd });
+  const { data } = useSummary({
+    period: currentPeriod,
+    dateStart,
+    dateEnd,
+    products: selectedProducts.length > 0 ? selectedProducts : undefined,
+  });
 
   // Vigia a planilha: quando entra venda nova (ou uma muda de status), os
   // dados sao invalidados e o painel recarrega com a mesma animacao do botao.
@@ -49,9 +56,20 @@ export default function Header() {
   const handlePeriodChange = (val: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('period', val);
-    // Sair do personalizado descarta as datas: deixa-las para tras faria o
-    // proximo "personalizado" reabrir num intervalo que o usuario ja trocou.
-    if (val !== 'custom') {
+    if (val === 'custom') {
+      // Se não havia datas personalizadas definidas, inicializa com o intervalo do período atual
+      // ou hoje, para JAMAIS carregar o "máximo" de surpresa!
+      if (!params.get('dateStart') || !params.get('dateEnd')) {
+        const resolved = resolvePeriod(currentPeriod === 'custom' ? 'today' : currentPeriod);
+        const todayStr = formatDay(startOfToday());
+        const start = resolved.dateStart || todayStr;
+        const end = resolved.dateEnd || todayStr;
+        params.set('dateStart', start);
+        params.set('dateEnd', end);
+      }
+      setAutoOpenCustom(true);
+    } else {
+      setAutoOpenCustom(false);
       params.delete('dateStart');
       params.delete('dateEnd');
     }
@@ -59,6 +77,7 @@ export default function Header() {
   };
 
   const handleCustomRange = (range: { dateStart: string; dateEnd: string }) => {
+    setAutoOpenCustom(false);
     const params = new URLSearchParams(searchParams.toString());
     params.set('period', 'custom');
     params.set('dateStart', range.dateStart);
@@ -144,7 +163,12 @@ export default function Header() {
         {currentPeriod === 'custom' && (
           <div className="flex flex-col gap-1.5 col-span-2">
             <label className="text-gray-300 text-xs font-medium">Intervalo</label>
-            <DateRangePicker dateStart={dateStart} dateEnd={dateEnd} onApply={handleCustomRange} />
+            <DateRangePicker
+              dateStart={dateStart}
+              dateEnd={dateEnd}
+              autoOpen={autoOpenCustom}
+              onApply={handleCustomRange}
+            />
           </div>
         )}
 

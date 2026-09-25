@@ -209,8 +209,10 @@ function ProductCard({ product }: { product: ProductRow }) {
 export default function ProdutosPage() {
   const searchParams = useSearchParams();
   const period = searchParams.get('period') || 'today';
+  const dateStart = searchParams.get('dateStart') || undefined;
+  const dateEnd = searchParams.get('dateEnd') || undefined;
 
-  const { data, isLoading, isError } = useProducts({ period });
+  const { data, isLoading, isError } = useProducts({ period, dateStart, dateEnd });
 
   if (isLoading) {
     return (

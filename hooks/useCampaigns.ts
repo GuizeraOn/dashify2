@@ -68,15 +68,24 @@ export interface CampaignsResponse {
 interface UseCampaignsOptions {
   period?: string;
   level?: CampaignLevel;
+  dateStart?: string;
+  dateEnd?: string;
 }
 
-export function useCampaigns({ period = 'today', level = 'campaign' }: UseCampaignsOptions = {}) {
+export function useCampaigns({
+  period = 'today',
+  level = 'campaign',
+  dateStart,
+  dateEnd,
+}: UseCampaignsOptions = {}) {
   return useQuery<CampaignsResponse>({
-    queryKey: ['campaigns', period, level],
+    queryKey: ['campaigns', period, level, dateStart, dateEnd],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (period) params.append('period', period);
       params.append('level', level);
+      if (dateStart) params.append('dateStart', dateStart);
+      if (dateEnd) params.append('dateEnd', dateEnd);
 
       const res = await fetch(`/api/campaigns?${params.toString()}`);
       if (!res.ok) {

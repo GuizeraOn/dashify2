@@ -86,6 +86,18 @@ export function resolvePeriod(period: string | null, fallback: DateRange = {}): 
       return range(new Date(Date.UTC(year, month - 1, 1)), new Date(Date.UTC(year, month, 0)));
     case 'maximum':
       return { dateStart: undefined, dateEnd: undefined };
+    case 'custom': {
+      // Se custom foi solicitado sem datas, JAMAIS devolve vazio (máximo).
+      // Usa a data de hoje como fallback seguro.
+      if (!fallback.dateStart && !fallback.dateEnd) {
+        return range(today, today);
+      }
+      const start = fallback.dateStart || fallback.dateEnd!;
+      const end = fallback.dateEnd || fallback.dateStart!;
+      return start <= end
+        ? { dateStart: start, dateEnd: end }
+        : { dateStart: end, dateEnd: start };
+    }
     default:
       return fallback;
   }

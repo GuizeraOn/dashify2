@@ -30,12 +30,20 @@ export interface ProductsResponse {
   checkout_base: string;
 }
 
-export function useProducts({ period = 'today' }: { period?: string } = {}) {
+interface UseProductsOptions {
+  period?: string;
+  dateStart?: string;
+  dateEnd?: string;
+}
+
+export function useProducts({ period = 'today', dateStart, dateEnd }: UseProductsOptions = {}) {
   return useQuery<ProductsResponse>({
-    queryKey: ['products', period],
+    queryKey: ['products', period, dateStart, dateEnd],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (period) params.append('period', period);
+      if (dateStart) params.append('dateStart', dateStart);
+      if (dateEnd) params.append('dateEnd', dateEnd);
 
       const res = await fetch(`/api/products?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to fetch products');
