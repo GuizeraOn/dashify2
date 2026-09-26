@@ -3,7 +3,6 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { parsePerfectPayPayload, detectCurrency } from '@/lib/parsers/perfectpay';
 import { getExchangeRateToBrl } from '@/lib/currency';
 import type { PerfectPayWebhookPayload } from '@/lib/types';
-import { sendSalePushNotification } from '@/lib/push-service';
 
 /**
  * Receptor de Webhooks da Perfect Pay
@@ -82,13 +81,6 @@ export async function POST(request: NextRequest) {
         { error: 'Database error: ' + error.message },
         { status: 500 }
       );
-    }
-
-    // Se a venda estiver aprovada, dispara notificação Web Push para PC e celulares cadastrados
-    if (parsedSale.status === 'aprovado') {
-      sendSalePushNotification(parsedSale).catch((pushErr) => {
-        console.error('Erro ao disparar notificação push da venda:', pushErr);
-      });
     }
 
     return NextResponse.json({
