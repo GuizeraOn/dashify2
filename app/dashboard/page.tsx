@@ -131,8 +131,8 @@ export default function DashboardPage() {
       dependsOnSpend: true,
       title: 'ROI',
       value: kpis?.roi ?? null,
-      type: 'percent',
-      tooltip: 'Retorno sobre Investimento: (Faturamento Líquido - Gastos com Imposto) / Gastos com Imposto * 100',
+      type: 'number',
+      tooltip: 'Retorno sobre Investimento: (Faturamento Líquido - Gastos com Imposto) / Gastos com Imposto',
     },
     {
       key: 'kpi-cpa',

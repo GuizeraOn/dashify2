@@ -21,8 +21,8 @@ export function calculateKPIs(metaData: MetaRow[], vendasData: VendasRow[], fron
   const profit = netRevenue - realSpend;
 
   // 4. ROI
-  // Retorno sobre o Investimento: (Faturamento - Custos) / Custos * 100
-  const roi = spend > 0 ? (profit / realSpend) * 100 : null;
+  // Retorno sobre o Investimento: (Faturamento - Custos) / Custos
+  const roi = spend > 0 ? (profit / realSpend) : null;
 
   // 5. ROAS
   // Faturamento Bruto Atribuído / Gasto com Anúncios (apenas o ad spend do Meta)
