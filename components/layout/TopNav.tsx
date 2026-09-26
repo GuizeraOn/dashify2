@@ -5,6 +5,7 @@ import { Target } from 'lucide-react';
 import { Poppins } from 'next/font/google';
 import { useLayoutStore } from '@/store/layoutStore';
 import InstallButton from '@/components/pwa/InstallButton';
+import NotificationBell from '@/components/pwa/NotificationBell';
 import { useRouter } from 'next/navigation';
 import { createBrowserSupabase } from '@/lib/supabase-auth';
 
@@ -32,7 +33,10 @@ export default function TopNav() {
       </div>
 
       {/* Right Actions */}
-      <div className="flex items-center gap-3 md:gap-6">
+      <div className="flex items-center gap-3 md:gap-5">
+
+        {/* Notificações push de vendas aprovadas */}
+        <NotificationBell />
 
         {/* So renderiza quando o navegador oferece a instalacao */}
         <InstallButton />
