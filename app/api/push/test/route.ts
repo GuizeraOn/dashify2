@@ -5,7 +5,7 @@ export async function POST() {
   try {
     const result = await sendPushToAll({
       title: 'Venda Realizada (Cartão de crédito)',
-      body: 'Sua comissão: US$ 37.50\nProduto: Produto de Teste (Dashify)',
+      body: 'Sua comissão: US$ 37.50',
       url: '/dashboard/vendas',
       tag: `test-${Date.now()}`,
     });

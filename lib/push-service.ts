@@ -348,8 +348,7 @@ export async function sendSalePushNotification(sale: SalesRow): Promise<void> {
   });
 
   const title = `Venda Realizada (${paymentMethod})`;
-  const productName = sale.product_name ? `\nProduto: ${sale.product_name}` : '';
-  const body = `Sua comissão: ${currencySymbol} ${formattedAmount}${productName}`;
+  const body = `Sua comissão: ${currencySymbol} ${formattedAmount}`;
 
   await sendPushToAll({
     title,

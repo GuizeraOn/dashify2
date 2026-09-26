@@ -171,7 +171,6 @@ export default function NotificationBell() {
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-white">Venda Realizada (Cartão de crédito)</p>
                   <p className="text-xs font-bold text-emerald-400 mt-0.5">Sua comissão: US$ 37.50</p>
-                  <p className="text-[11px] text-gray-400 truncate mt-0.5">Produto: El Protocolo del Vinagre</p>
                 </div>
               </div>
             </div>
