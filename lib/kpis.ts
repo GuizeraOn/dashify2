@@ -1,10 +1,10 @@
 import { MetaRow, VendasRow, KPIs } from './types';
 
 /**
- * O multiplicador de imposto pode ser usado caso seja necessário 
- * adicionar os 13% sobre os anúncios do Meta. No momento, o cálculo é direto.
+ * O gasto declarado pelo Meta não inclui os 13% de imposto cobrados sobre a
+ * fatura. O cálculo de Lucro e CPA multiplica por isto.
  */
-export const META_TAX_MULTIPLIER = 1.0;
+export const META_TAX_MULTIPLIER = 1.13;
 
 export function calculateKPIs(metaData: MetaRow[], vendasData: VendasRow[], frontProducts: string[] = []): KPIs {
   // 1. Gastos com Anúncios
@@ -16,13 +16,13 @@ export function calculateKPIs(metaData: MetaRow[], vendasData: VendasRow[], fron
   );
   const netRevenue = approvedVendas.reduce((sum, row) => sum + (row.net_revenue_brl || 0), 0);
 
-  // 3. Lucro
+  // 3. Lucro (Faturamento Líquido - Gastos com Anúncios + 13% de imposto)
   const realSpend = spend * META_TAX_MULTIPLIER;
   const profit = netRevenue - realSpend;
 
   // 4. ROI
-  // Retorno sobre o Investimento: (Faturamento - Custos) / Custos
-  const roi = spend > 0 ? (profit / realSpend) : null;
+  // Retorno sobre o Investimento: Lucro / Gasto com Anúncios
+  const roi = spend > 0 ? (profit / spend) : null;
 
   // 5. ROAS
   // Faturamento Bruto Atribuído / Gasto com Anúncios (apenas o ad spend do Meta)
