@@ -12,7 +12,18 @@ export default function ServiceWorkerRegistration() {
     if (!('serviceWorker' in navigator)) return;
 
     const register = () => {
-      navigator.serviceWorker.register('/sw.js').catch((error) => {
+      navigator.serviceWorker.register('/sw.js').then((registration) => {
+        // Register periodic sync for the widget
+        if ('periodicSync' in registration) {
+          try {
+            (registration as any).periodicSync.register('sync-vendas', {
+              minInterval: 15 * 60 * 1000, // 15 minutos
+            });
+          } catch (e) {
+            console.warn('Periodic sync failed:', e);
+          }
+        }
+      }).catch((error) => {
         console.warn('Falha ao registrar o service worker:', error);
       });
     };

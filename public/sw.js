@@ -100,3 +100,23 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(cacheFirst(request, ASSET_CACHE));
   }
 });
+// Widget Periodic Sync
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'sync-vendas') {
+    event.waitUntil(fetchAndCacheVendas());
+  }
+});
+
+async function fetchAndCacheVendas() {
+  try {
+    const res = await fetch('/api/widget/vendas-hoje');
+    const data = await res.json();
+    const cache = await caches.open('widget-data-v1');
+    await cache.put('/api/widget/vendas-hoje', new Response(JSON.stringify(data)));
+    
+    const clients = await self.clients.matchAll();
+    clients.forEach(c => c.postMessage({ type: 'WIDGET_UPDATE', data }));
+  } catch (err) {
+    console.error('Falha no sync de vendas', err);
+  }
+}

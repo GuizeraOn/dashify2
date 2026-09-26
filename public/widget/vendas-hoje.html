@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Widget Vendas Hoje</title>
+  <link rel="stylesheet" href="vendas-hoje.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="widget-container">
+    <header class="header">
+      <div class="logo">🔥</div>
+      <button class="currency-badge" id="currency-toggle" aria-label="Alternar Moeda">
+        <span id="currency-label">USD</span>
+        <span class="arrow">▾</span>
+      </button>
+    </header>
+
+    <main class="main-content">
+      <div class="info-row">
+        <div class="title-group">
+          <h2 class="title">Vendas Hoje</h2>
+          <span class="variation" id="variation-badge">--</span>
+        </div>
+      </div>
+      
+      <div class="value-row">
+        <div class="main-value" id="main-value">$0</div>
+        <div class="meta-label">Meta: <span id="meta-value">5</span> vendas</div>
+      </div>
+
+      <div class="chart-wrapper">
+        <canvas id="salesChart"></canvas>
+      </div>
+    </main>
+
+    <footer class="status-bar">
+      <span class="dot live" id="status-dot"></span>
+      <span class="status-text" id="status-text">Carregando...</span>
+    </footer>
+  </div>
+
+  <script src="widget.js"></script>
+</body>
+</html>
