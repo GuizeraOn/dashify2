@@ -184,6 +184,7 @@ export function parseVendas(rows: any[][]): VendasRow[] {
       utm_content: String(getValue(row, ['utm content', 'utm_content'], 21)),
       utm_term: String(getValue(row, ['utm term', 'utm_term'], 22)),
       phone: phone,
+      email: String(getValue(row, ['email', 'e-mail', 'customer_email'])),
     };
   });
 }
