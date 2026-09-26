@@ -1,10 +1,10 @@
 import { MetaRow, VendasRow, KPIs } from './types';
 
 /**
- * O gasto declarado pelo Meta nao inclui os 13% de imposto cobrados sobre a
- * fatura. Todo calculo de custo real multiplica por isto.
+ * O multiplicador de imposto pode ser usado caso seja necessário 
+ * adicionar os 13% sobre os anúncios do Meta. No momento, o cálculo é direto.
  */
-export const META_TAX_MULTIPLIER = 1.13;
+export const META_TAX_MULTIPLIER = 1.0;
 
 export function calculateKPIs(metaData: MetaRow[], vendasData: VendasRow[], frontProducts: string[] = []): KPIs {
   // 1. Gastos com Anúncios
@@ -16,7 +16,7 @@ export function calculateKPIs(metaData: MetaRow[], vendasData: VendasRow[], fron
   );
   const netRevenue = approvedVendas.reduce((sum, row) => sum + (row.net_revenue_brl || 0), 0);
 
-  // 3. Lucro (Descontando 13% de impostos sobre os anúncios do Meta)
+  // 3. Lucro
   const realSpend = spend * META_TAX_MULTIPLIER;
   const profit = netRevenue - realSpend;
 

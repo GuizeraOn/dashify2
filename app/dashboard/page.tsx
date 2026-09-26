@@ -124,7 +124,7 @@ export default function DashboardPage() {
       dependsOnSpend: true,
       title: 'Lucro',
       value: kpis?.profit ?? null,
-      tooltip: 'Faturamento Líquido - (Gastos com Anúncios + 13% Imposto Meta)',
+      tooltip: 'Faturamento Líquido - Gastos com Anúncios',
     },
     {
       key: 'kpi-roi',
@@ -132,7 +132,7 @@ export default function DashboardPage() {
       title: 'ROI',
       value: kpis?.roi ?? null,
       type: 'number',
-      tooltip: 'Retorno sobre Investimento: (Faturamento Líquido - Gastos com Imposto) / Gastos com Imposto',
+      tooltip: 'Retorno sobre Investimento: (Faturamento Líquido - Gastos) / Gastos',
     },
     {
       key: 'kpi-cpa',
@@ -140,7 +140,7 @@ export default function DashboardPage() {
       title: 'CPA',
       value: kpis?.cpa ?? null,
       inverseColors: true,
-      tooltip: 'Custo por Aquisição: (Gastos + 13% Imposto Meta) / Quantidade de Vendas Aprovadas',
+      tooltip: 'Custo por Aquisição: Gastos / Quantidade de Vendas Aprovadas',
     },
     {
       key: 'kpi-roas',
@@ -148,7 +148,7 @@ export default function DashboardPage() {
       title: 'ROAS',
       value: kpis?.roas ?? null,
       type: 'number',
-      tooltip: 'Retorno sobre o Gasto em Anúncios: Faturamento Bruto Aprovado / Gastos com Anúncios',
+      tooltip: 'Retorno sobre o Gasto em Anúncios: Faturamento Bruto / Gastos com Anúncios',
     },
     {
       key: 'kpi-margin',
