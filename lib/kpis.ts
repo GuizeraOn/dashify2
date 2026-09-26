@@ -21,12 +21,13 @@ export function calculateKPIs(metaData: MetaRow[], vendasData: VendasRow[], fron
   const profit = netRevenue - realSpend;
 
   // 4. ROI
-  // Retorno sobre o Investimento real (usando o gasto com impostos como base)
-  const roi = spend > 0 ? (profit / realSpend) : null;
+  // Retorno sobre o Investimento: (Faturamento - Custos) / Custos * 100
+  const roi = spend > 0 ? (profit / realSpend) * 100 : null;
 
   // 5. ROAS
+  // Faturamento Bruto Atribuído / Gasto com Anúncios (apenas o ad spend do Meta)
   const grossRevenueApproved = approvedVendas.reduce((sum, row) => sum + (row.gross_revenue_brl || 0), 0);
-  const roas = spend > 0 ? (grossRevenueApproved / realSpend) : null;
+  const roas = spend > 0 ? (grossRevenueApproved / spend) : null;
 
   // 6. CPA
   // Conta apenas produtos "front" se existirem na config, senao conta todos
