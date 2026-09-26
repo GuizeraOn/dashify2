@@ -42,7 +42,15 @@ export async function getPushSubscriptionState(): Promise<{
 
   const permission = Notification.permission;
   try {
-    const registration = await navigator.serviceWorker.ready;
+    const registration = await navigator.serviceWorker.getRegistration();
+    if (!registration) {
+      return {
+        supported: true,
+        permission,
+        isSubscribed: false,
+        subscription: null,
+      };
+    }
     const subscription = await registration.pushManager.getSubscription();
     return {
       supported: true,
@@ -83,14 +91,14 @@ export async function subscribeToPushNotifications(): Promise<{
     };
   }
 
-  // 2. Garante que o Service Worker está pronto
+  // 2. Garante que o Service Worker está registrado e pronto
   let registration: ServiceWorkerRegistration;
   try {
-    registration = await navigator.serviceWorker.ready;
-  } catch (swErr: any) {
-    // Se ainda não estava registrado, tenta registrar manualmente
     registration = await navigator.serviceWorker.register('/sw.js');
     await navigator.serviceWorker.ready;
+  } catch (swErr: any) {
+    console.error('Erro ao registrar Service Worker:', swErr);
+    return { success: false, message: 'Falha ao registrar Service Worker no navegador.' };
   }
 
   // 3. Busca a chave pública VAPID do servidor
