@@ -159,6 +159,13 @@ export default function DashboardPage() {
       tooltip: 'Lucro / Faturamento Líquido * 100',
     },
     {
+      key: 'kpi-arpu',
+      dependsOnSpend: false,
+      title: 'ARPU',
+      value: kpis?.arpu ?? null,
+      tooltip: 'Average Revenue Per User: Faturamento Líquido / Quantidade de Clientes Únicos',
+    },
+    {
       key: 'kpi-pending',
       title: 'Vendas Pendentes',
       value: kpis?.pending_revenue ?? null,

@@ -35,6 +35,7 @@ export interface VendasRow {
   utm_content: string;
   utm_term: string;
   phone: string;
+  email: string;
 }
 
 export interface SalesRow {
@@ -174,4 +175,5 @@ export interface KPIs {
   ctr: number | null;
   connect_rate: number | null;
   cpm: number | null;
+  arpu: number | null;
 }

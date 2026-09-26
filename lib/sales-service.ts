@@ -73,6 +73,7 @@ export function mapSalesRowToVendasRow(row: any): VendasRow {
     utm_content: String(row.utm_content || ''),
     utm_term: String(row.utm_term || ''),
     phone: String(row.customer_phone || ''),
+    email: String(row.customer_email || ''),
   };
 }
 

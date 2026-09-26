@@ -43,7 +43,16 @@ export function calculateKPIs(metaData: MetaRow[], vendasData: VendasRow[], fron
   // 7. Margem de Lucro
   const profitMargin = netRevenue > 0 ? (profit / netRevenue) * 100 : null;
 
-  // 8. Vendas Pendentes
+  // 8. ARPU (Average Revenue Per User)
+  const uniqueUsers = new Set<string>();
+  approvedVendas.forEach(row => {
+    // Tenta identificar o usuário de forma única (email, depois telefone, depois nome)
+    const userId = (row.email || row.phone || row.cliente || row.key).trim().toLowerCase();
+    if (userId) uniqueUsers.add(userId);
+  });
+  const arpu = uniqueUsers.size > 0 ? (netRevenue / uniqueUsers.size) : null;
+
+  // 9. Vendas Pendentes
   const pendingVendas = vendasData.filter(row => 
     row.status.toLowerCase().trim() === 'aguardando'
   );
@@ -94,6 +103,7 @@ export function calculateKPIs(metaData: MetaRow[], vendasData: VendasRow[], fron
     ctr,
     connect_rate: connectRate,
     cpm,
+    arpu,
   };
 }
 
