@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-export default function manifest(): MetadataRoute.Manifest | any {
+export default function manifest(): MetadataRoute.Manifest {
   return {
     id: '/dashboard',
     name: 'Dashify — Performance em tempo real',
@@ -48,18 +48,5 @@ export default function manifest(): MetadataRoute.Manifest | any {
         icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
       },
     ],
-    widgets: [
-      {
-        name: 'Vendas Hoje',
-        short_name: 'Vendas',
-        description: 'Acompanhe suas vendas em tempo real',
-        tag: 'vendas-hoje',
-        template: '/widget/vendas-hoje.html',
-        data: '/api/widget/vendas-hoje',
-        type: 'application/json',
-        backgrounds: ['#0D0D1A'],
-        update: 900,
-      },
-    ] as any,
   };
 }
