@@ -21,6 +21,7 @@ export async function sendAccessEmail({ customerName, customerEmail, productName
   try {
     const { data, error } = await resend.emails.send({
       from: 'Soporte <contacto@noticiasde-ultimahora.online>',
+      reply_to: 'contacto@noticiasde-ultimahora.online',
       to: customerEmail,
       subject: `✅ Tu acceso a El Protocolo del Vinagre está listo, ${firstName}`,
       html: `
