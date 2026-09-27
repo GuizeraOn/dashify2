@@ -83,6 +83,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Se a venda acabou de ser aprovada, enviar e-mail de acesso via Resend
+    const rawPayload = payload as PerfectPayWebhookPayload;
+    const isApproved = rawPayload.sale_status_enum === 2 || parsedSale.status.toLowerCase() === 'aprovado';
+    
+    if (isApproved && rawPayload.customer?.email) {
+      const { sendAccessEmail } = await import('@/lib/email-service');
+      // Importante: Dispara a função sem aguardar com await para não travar a resposta do Webhook
+      sendAccessEmail({
+        customerName: rawPayload.customer.full_name || 'Cliente',
+        customerEmail: rawPayload.customer.email,
+        productName: rawPayload.product?.name || parsedSale.product_name,
+      }).catch(console.error);
+    }
+
     return NextResponse.json({
       success: true,
       code: parsedSale.code,
