@@ -69,8 +69,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upsert no Supabase (idempotente)
+    // 1. Verifica status anterior para evitar e-mails duplicados em retentativas de webhook
     const supabase = getSupabaseAdmin();
+    const { data: existingSale } = await supabase
+      .from('sales')
+      .select('status')
+      .eq('code', parsedSale.code)
+      .single();
+    
+    const wasAlreadyApproved = existingSale?.status?.toLowerCase() === 'aprovado';
+
+    // 2. Upsert no Supabase (idempotente)
     const { error } = await supabase
       .from('sales')
       .upsert(parsedSale, { onConflict: 'code' });
@@ -83,18 +92,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Se a venda acabou de ser aprovada, enviar e-mail de acesso via Resend
+    // 3. Lógica de envio de E-mail de Acesso
     const rawPayload = payload as PerfectPayWebhookPayload;
-    const isApproved = rawPayload.sale_status_enum === 2 || parsedSale.status.toLowerCase() === 'aprovado';
+    const isApprovedNow = rawPayload.sale_status_enum === 2 || parsedSale.status.toLowerCase() === 'aprovado';
     
-    if (isApproved && rawPayload.customer?.email) {
-      const { sendAccessEmail } = await import('@/lib/email-service');
-      // Precisa usar 'await' na Vercel (Serverless), senão a função é morta assim que retorna a resposta
-      await sendAccessEmail({
-        customerName: rawPayload.customer.full_name || 'Cliente',
-        customerEmail: rawPayload.customer.email,
-        productName: rawPayload.product?.name || parsedSale.product_name,
-      });
+    if (isApprovedNow && !wasAlreadyApproved && rawPayload.customer?.email) {
+      const productName = rawPayload.product?.name || parsedSale.product_name;
+
+      // Busca categorias para ver se é upsell/order bump
+      const { data: settings } = await supabase.from('app_settings').select('value').eq('key', 'product_categories').single();
+      const categories = settings?.value || {};
+      const category = categories[productName];
+
+      if (category === 'upsell' || category === 'order_bump') {
+        console.log(`E-mail ignorado: Produto "${productName}" está classificado como ${category}.`);
+      } else {
+        // Verifica se o cliente já teve alguma outra compra aprovada nas últimas 24h
+        // Isso previne envio duplo caso o front e upsell cheguem juntos e não estejam categorizados
+        const { data: recentSales } = await supabase
+          .from('sales')
+          .select('code')
+          .eq('email', rawPayload.customer.email)
+          .eq('status', 'Aprovado')
+          .neq('code', parsedSale.code)
+          .gte('date', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+          .limit(1);
+
+        if (recentSales && recentSales.length > 0) {
+          console.log(`E-mail ignorado: Cliente ${rawPayload.customer.email} já possui compra aprovada nas últimas 24h (possível Upsell).`);
+        } else {
+          const { sendAccessEmail } = await import('@/lib/email-service');
+          // Precisa usar 'await' na Vercel (Serverless), senão a função é morta
+          await sendAccessEmail({
+            customerName: rawPayload.customer.full_name || 'Cliente',
+            customerEmail: rawPayload.customer.email,
+            productName: productName,
+          });
+        }
+      }
     }
 
     return NextResponse.json({
