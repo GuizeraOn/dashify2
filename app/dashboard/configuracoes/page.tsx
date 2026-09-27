@@ -8,11 +8,11 @@ export default function ConfigPage() {
   const { data, isLoading } = useSummary({});
   const availableProducts = data?.available_products || [];
 
-  // Front-end Products State
-  const [frontProducts, setFrontProducts] = useState<string[]>([]);
-  const [isSavingFront, setIsSavingFront] = useState(false);
+  // Product Categories State
+  const [productCategories, setProductCategories] = useState<Record<string, 'front' | 'order_bump' | 'upsell' | 'ignore'>>({});
+  const [isSavingCategories, setIsSavingCategories] = useState(false);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
-  const [saveMessageFront, setSaveMessageFront] = useState('');
+  const [saveMessageCategories, setSaveMessageCategories] = useState('');
 
   // Email Template State
   const [emailSubject, setEmailSubject] = useState('');
@@ -25,11 +25,28 @@ export default function ConfigPage() {
   useEffect(() => {
     async function loadSettings() {
       try {
-        // Load Front Products
-        const res = await fetch('/api/settings?key=front_products');
+        // Load Product Categories
+        const res = await fetch('/api/settings?key=product_categories');
         const json = await res.json();
+        
         if (json.data && json.data.length > 0) {
-          setFrontProducts(json.data[0].value || []);
+          const value = json.data[0].value;
+          // Compatibility with old "front_products" array format if needed, but we saved it as a different key here
+          if (typeof value === 'object' && !Array.isArray(value)) {
+            setProductCategories(value);
+          }
+        } else {
+          // If product_categories doesn't exist, try loading old front_products to migrate
+          const resOld = await fetch('/api/settings?key=front_products');
+          const jsonOld = await resOld.json();
+          if (jsonOld.data && jsonOld.data.length > 0) {
+            const oldArray = jsonOld.data[0].value || [];
+            if (Array.isArray(oldArray)) {
+              const migrated: Record<string, any> = {};
+              oldArray.forEach(p => { migrated[p] = 'front'; });
+              setProductCategories(migrated);
+            }
+          }
         }
 
         // Load Email Template
@@ -53,32 +70,31 @@ export default function ConfigPage() {
     loadSettings();
   }, []);
 
-  const toggleProduct = (prod: string) => {
-    setFrontProducts(prev => 
-      prev.includes(prod) 
-        ? prev.filter(p => p !== prod)
-        : [...prev, prod]
-    );
+  const setCategory = (prod: string, cat: 'front' | 'order_bump' | 'upsell' | 'ignore') => {
+    setProductCategories(prev => ({
+      ...prev,
+      [prod]: cat
+    }));
   };
 
-  const handleSaveFront = async () => {
-    setIsSavingFront(true);
-    setSaveMessageFront('');
+  const handleSaveCategories = async () => {
+    setIsSavingCategories(true);
+    setSaveMessageCategories('');
     try {
       const res = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'front_products', value: frontProducts })
+        body: JSON.stringify({ key: 'product_categories', value: productCategories })
       });
       
       if (!res.ok) throw new Error('Falha ao salvar');
       
-      setSaveMessageFront('Configurações salvas com sucesso!');
-      setTimeout(() => setSaveMessageFront(''), 3000);
+      setSaveMessageCategories('Configurações salvas com sucesso!');
+      setTimeout(() => setSaveMessageCategories(''), 3000);
     } catch (e: any) {
-      setSaveMessageFront('Erro: ' + e.message);
+      setSaveMessageCategories('Erro: ' + e.message);
     } finally {
-      setIsSavingFront(false);
+      setIsSavingCategories(false);
     }
   };
 
@@ -107,42 +123,46 @@ export default function ConfigPage() {
     <div className="space-y-6 max-w-4xl pb-12 animate-in fade-in duration-500">
       <h1 className="text-2xl font-bold text-white mb-6">Configurações do Sistema</h1>
       
-      {/* 1. Configurações de CPA */}
+      {/* 1. Configurações de Produtos e CPA */}
       <div className="bg-[#1E1E1E] rounded-xl p-6 shadow-sm border border-[#333]">
-        <h2 className="text-xl font-semibold text-white mb-2">Configurações de CPA (Produtos Front-end)</h2>
+        <h2 className="text-xl font-semibold text-white mb-2">Categorização de Produtos (Funil e CPA)</h2>
         <p className="text-gray-400 text-sm mb-6">
-          Selecione abaixo quais produtos são considerados <strong>Front-end</strong> (produto principal). 
-          O cálculo de CPA dividirá os gastos apenas pelo número de vendas dos produtos selecionados, 
-          ignorando Order Bumps e Upsells. Se nenhum for selecionado, todas as vendas aprovadas serão contadas.
+          Classifique seus produtos para que o Dashboard calcule as métricas corretamente. <br/>
+          O <strong>CPA e a Conversão de Checkout</strong> são calculados exclusivamente sobre os produtos marcados como <strong>Front-end</strong>.
         </p>
 
         {isLoading || isLoadingSettings ? (
-          <div className="text-gray-500 text-sm animate-pulse">Carregando lista de produtos da Hotmart...</div>
+          <div className="text-gray-500 text-sm animate-pulse">Carregando lista de produtos da PerfectPay...</div>
         ) : (
           <div className="space-y-4">
             {availableProducts.length === 0 ? (
-              <p className="text-gray-500 text-sm">Nenhum produto encontrado nas planilhas recentes.</p>
+              <p className="text-gray-500 text-sm">Nenhum produto encontrado nas vendas recentes.</p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-4">
                 {availableProducts.map(prod => {
-                  const isSelected = frontProducts.includes(prod);
+                  const currentCat = productCategories[prod] || 'ignore';
                   return (
-                    <label 
-                      key={prod} 
-                      className={`flex items-start p-4 rounded-lg border cursor-pointer transition-colors ${
-                        isSelected 
-                          ? 'border-[#0f62fe] bg-[#0f62fe]/10' 
-                          : 'border-[#333] bg-[#242424] hover:border-gray-500'
-                      }`}
-                    >
-                      <input 
-                        type="checkbox" 
-                        className="mt-1 mr-3 w-4 h-4 rounded border-gray-600 bg-gray-700 text-[#0f62fe] focus:ring-[#0f62fe]"
-                        checked={isSelected}
-                        onChange={() => toggleProduct(prod)}
-                      />
-                      <span className="text-sm text-gray-200">{prod}</span>
-                    </label>
+                    <div key={prod} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg border border-[#333] bg-[#242424] gap-4">
+                      <span className="text-sm text-gray-200 font-medium truncate flex-1">{prod}</span>
+                      <div className="flex gap-2">
+                        <label className={`cursor-pointer px-3 py-1.5 text-xs rounded-md border transition-colors ${currentCat === 'front' ? 'bg-[#0f62fe]/20 border-[#0f62fe] text-[#0f62fe]' : 'border-[#444] text-gray-400 hover:border-gray-500'}`}>
+                          <input type="radio" className="hidden" checked={currentCat === 'front'} onChange={() => setCategory(prod, 'front')} />
+                          Front-end
+                        </label>
+                        <label className={`cursor-pointer px-3 py-1.5 text-xs rounded-md border transition-colors ${currentCat === 'order_bump' ? 'bg-amber-500/20 border-amber-500 text-amber-500' : 'border-[#444] text-gray-400 hover:border-gray-500'}`}>
+                          <input type="radio" className="hidden" checked={currentCat === 'order_bump'} onChange={() => setCategory(prod, 'order_bump')} />
+                          Order Bump
+                        </label>
+                        <label className={`cursor-pointer px-3 py-1.5 text-xs rounded-md border transition-colors ${currentCat === 'upsell' ? 'bg-purple-500/20 border-purple-500 text-purple-400' : 'border-[#444] text-gray-400 hover:border-gray-500'}`}>
+                          <input type="radio" className="hidden" checked={currentCat === 'upsell'} onChange={() => setCategory(prod, 'upsell')} />
+                          Upsell
+                        </label>
+                        <label className={`cursor-pointer px-3 py-1.5 text-xs rounded-md border transition-colors ${currentCat === 'ignore' ? 'bg-gray-500/20 border-gray-500 text-gray-300' : 'border-[#444] text-gray-400 hover:border-gray-500'}`}>
+                          <input type="radio" className="hidden" checked={currentCat === 'ignore'} onChange={() => setCategory(prod, 'ignore')} />
+                          Ignorar
+                        </label>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -150,16 +170,16 @@ export default function ConfigPage() {
 
             <div className="pt-4 flex items-center gap-4 border-t border-[#333] mt-6">
               <button 
-                onClick={handleSaveFront}
-                disabled={isSavingFront}
+                onClick={handleSaveCategories}
+                disabled={isSavingCategories}
                 className="bg-[#0f62fe] hover:bg-[#0353e9] disabled:opacity-50 text-white px-6 py-2 rounded-md font-medium transition-colors"
               >
-                {isSavingFront ? 'Salvando...' : 'Salvar Configurações'}
+                {isSavingCategories ? 'Salvando...' : 'Salvar Classificações'}
               </button>
               
-              {saveMessageFront && (
-                <span className={`text-sm ${saveMessageFront.includes('Erro') ? 'text-red-500' : 'text-green-500'}`}>
-                  {saveMessageFront}
+              {saveMessageCategories && (
+                <span className={`text-sm ${saveMessageCategories.includes('Erro') ? 'text-red-500' : 'text-green-500'}`}>
+                  {saveMessageCategories}
                 </span>
               )}
             </div>

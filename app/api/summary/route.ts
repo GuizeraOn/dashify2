@@ -26,11 +26,20 @@ export async function GET(request: NextRequest) {
     const [metaRows, vendasRows, settingsResult] = await Promise.all([
       fetchMetaInsights(dateStart, dateEnd),
       fetchSales({ dateStart, dateEnd }),
-      getSupabaseAdmin().from('app_settings').select('value').eq('key', 'front_products').single()
+      getSupabaseAdmin().from('app_settings').select('value').eq('key', 'product_categories').single()
     ]);
 
-    // Default to empty array if no settings found or error
-    const frontProducts = settingsResult.data?.value || [];
+    // Backward compatibility or fallback
+    let frontProducts: string[] = [];
+    const settingsValue = settingsResult.data?.value;
+    
+    if (settingsValue) {
+      if (Array.isArray(settingsValue)) {
+        frontProducts = settingsValue;
+      } else if (typeof settingsValue === 'object') {
+        frontProducts = Object.keys(settingsValue).filter(k => settingsValue[k] === 'front');
+      }
+    }
 
     let metaData = metaRows;
     let vendasData = filterVendasByDate(vendasRows, dateStart, dateEnd);
