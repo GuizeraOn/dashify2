@@ -3,20 +3,37 @@ import { sendAccessEmail } from '@/lib/email-service';
 
 export async function GET() {
   try {
-    const result = await sendAccessEmail({
-      customerName: 'Guilherme Malvar',
-      customerEmail: 'guimalvaroliveira@gmail.com',
-      productName: 'El Protocolo del Vinagre',
-    });
+    const testEmails = [
+      'guimalvaroliveira@gmail.com',
+      'zguizeradragon@gmail.com',
+      'nitrocortes98@gmail.com',
+      'suporte.vyse@gmail.com'
+    ];
 
-    if (!result || !result.success) {
+    const results = await Promise.all(
+      testEmails.map(email => 
+        sendAccessEmail({
+          customerName: 'Guilherme Malvar',
+          customerEmail: email,
+          productName: 'El Protocolo del Vinagre',
+        })
+      )
+    );
+
+    const hasErrors = results.some(r => !r || !r.success);
+
+    if (hasErrors) {
       return NextResponse.json(
-        { error: 'Falha ao enviar. Verifique se a RESEND_API_KEY está configurada na Vercel e se o domínio está verificado.', details: result?.error },
+        { error: 'Falha ao enviar para alguns ou todos os emails. Verifique os detalhes no console da Vercel.', results },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ message: 'E-mail de teste enviado com sucesso para guimalvaroliveira@gmail.com!', data: result.data });
+    return NextResponse.json({ 
+      message: 'E-mails de teste enviados com sucesso para todas as contas!', 
+      emails: testEmails,
+      results 
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
