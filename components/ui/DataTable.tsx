@@ -25,9 +25,10 @@ interface DataTableProps<T> {
   columns: Column<T>[];
   defaultSortKey?: string;
   defaultSortDesc?: boolean;
+  onRowClick?: (row: T) => void;
 }
 
-export function DataTable<T>({ data, columns, defaultSortKey, defaultSortDesc = true }: DataTableProps<T>) {
+export function DataTable<T>({ data, columns, defaultSortKey, defaultSortDesc = true, onRowClick }: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | undefined>(defaultSortKey);
   const [sortDesc, setSortDesc] = useState<boolean>(defaultSortDesc);
   const [page, setPage] = useState(1);
@@ -247,7 +248,18 @@ export function DataTable<T>({ data, columns, defaultSortKey, defaultSortDesc = 
               </tr>
             ) : (
               paginatedData.map((row, i) => (
-                <tr key={i} className="group border-b border-[#333] hover:bg-[#2a2a2a] transition-colors last:border-0">
+                <tr 
+                  key={i} 
+                  className={cn(
+                    "group border-b border-[#333] hover:bg-[#2a2a2a] transition-colors last:border-0",
+                    onRowClick && "cursor-pointer"
+                  )}
+                  onClick={() => {
+                    if (!hasMovedRef.current && onRowClick) {
+                      onRowClick(row);
+                    }
+                  }}
+                >
                   {columns.map(col => {
                     const rawVal = col.accessor(row);
                     return (

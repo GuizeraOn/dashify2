@@ -7,6 +7,7 @@ import { VendasRow } from '@/lib/types';
 import { DataTable, Column } from '@/components/ui/DataTable';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Select } from '@/components/ui/Select';
+import { SaleDetailsModal } from '@/components/ui/SaleDetailsModal';
 
 export default function VendasPage() {
   const searchParams = useSearchParams();
@@ -20,6 +21,9 @@ export default function VendasPage() {
   // Local Filter States
   const [filterStatus, setFilterStatus] = useState<string>('qualquer');
   const [filterPayment, setFilterPayment] = useState<string>('qualquer');
+  
+  // Modal State
+  const [selectedSale, setSelectedSale] = useState<VendasRow | null>(null);
 
   // Compute unique values for local filters
   const uniqueStatuses = useMemo(() => {
@@ -152,7 +156,12 @@ export default function VendasPage() {
       <DataTable 
         data={filteredData} 
         columns={columns} 
-        // defaultSortKey="" (no default sort to keep chronological order from backend reverse)
+        onRowClick={(row) => setSelectedSale(row)}
+      />
+
+      <SaleDetailsModal 
+        sale={selectedSale} 
+        onClose={() => setSelectedSale(null)} 
       />
     </div>
   );
