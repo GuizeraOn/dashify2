@@ -58,7 +58,7 @@ export default function ConfigPage() {
         } else {
           // Default fallbacks if empty
           setEmailSubject('✅ Tu acceso a El Protocolo del Vinagre está listo, [nome]');
-          setEmailSender('Soporte <contacto@noticiasde-ultimahora.online>');
+          setEmailSender('Dr. Alejandro Vargas <contacto@noticiasde-ultimahora.online>');
           setEmailHtml('<p>Hola [nome],</p>\\n<p>Tu acceso: [email]</p>\\n<p>Tu producto: [produto]</p>');
         }
       } catch (e) {

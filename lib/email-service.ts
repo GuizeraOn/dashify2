@@ -62,7 +62,7 @@ export async function sendAccessEmail({ customerName, customerEmail, productName
     </div>
   `;
 
-  const senderEmail = templateData?.sender_email || 'Soporte <contacto@noticiasde-ultimahora.online>';
+  const senderEmail = templateData?.sender_email || 'Dr. Alejandro Vargas <contacto@noticiasde-ultimahora.online>';
   const replyTo = senderEmail.includes('<') ? senderEmail.split('<')[1].replace('>', '') : senderEmail;
 
   // Substituição de variáveis
