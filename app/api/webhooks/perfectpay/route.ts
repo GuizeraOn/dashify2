@@ -89,12 +89,12 @@ export async function POST(request: NextRequest) {
     
     if (isApproved && rawPayload.customer?.email) {
       const { sendAccessEmail } = await import('@/lib/email-service');
-      // Importante: Dispara a função sem aguardar com await para não travar a resposta do Webhook
-      sendAccessEmail({
+      // Precisa usar 'await' na Vercel (Serverless), senão a função é morta assim que retorna a resposta
+      await sendAccessEmail({
         customerName: rawPayload.customer.full_name || 'Cliente',
         customerEmail: rawPayload.customer.email,
         productName: rawPayload.product?.name || parsedSale.product_name,
-      }).catch(console.error);
+      });
     }
 
     return NextResponse.json({
