@@ -55,21 +55,7 @@ export default function RootLayout({
             o JavaScript carrega, e so fica visivel com o app instalado — em
             uma aba comum o CSS a mantem escondida. */}
         <div id="app-splash" aria-hidden="true">
-          <svg
-            width="88"
-            height="88"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#0f62fe"
-            strokeWidth="2.25"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <circle cx="12" cy="12" r="6" />
-            <circle cx="12" cy="12" r="2" />
-          </svg>
-          <span>Dashify</span>
+          <img src="/logo.png" alt="Dashify Logo" className="h-16 w-auto object-contain" />
         </div>
 
         <Providers>
