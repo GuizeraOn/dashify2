@@ -1,14 +1,10 @@
 'use client';
 
 import { ChevronDown, Moon, Edit, Check, LogOut } from 'lucide-react';
-import { Target } from 'lucide-react';
-import { Poppins } from 'next/font/google';
 import { useLayoutStore } from '@/store/layoutStore';
 import InstallButton from '@/components/pwa/InstallButton';
 import { useRouter } from 'next/navigation';
 import { createBrowserSupabase } from '@/lib/supabase-auth';
-
-const poppins = Poppins({ subsets: ['latin'], weight: ['400', '500', '600'] });
 
 export default function TopNav() {
   const { isEditingLayout, toggleEditingLayout } = useLayoutStore();
@@ -24,11 +20,8 @@ export default function TopNav() {
     <div className="h-16 bg-[#121212] border-b border-[#333] flex items-center justify-between px-4 md:px-6 z-40 flex-shrink-0">
       
       {/* Logo */}
-      <div className="flex items-center gap-2">
-        <Target className="text-[#0f62fe]" size={26} />
-        <span className={`${poppins.className} text-white text-2xl font-medium tracking-tight mb-0.5`}>
-          Dashify
-        </span>
+      <div className="flex items-center h-8">
+        <img src="/logo.png" alt="Dashify" className="h-full w-auto object-contain" />
       </div>
 
       {/* Right Actions */}

@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Target, Check, Loader2 } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { Poppins } from 'next/font/google';
 
 import { createBrowserSupabase } from '@/lib/supabase-auth';
@@ -74,13 +74,8 @@ function LoginForm() {
     <div className="flex min-h-screen items-center justify-center bg-[#121212] px-4 selection:bg-[#0f62fe] selection:text-white">
       <div className="w-full max-w-sm">
         {/* Brand Header */}
-        <div className="mb-8 flex items-center justify-center gap-2.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0f62fe]/10 border border-[#0f62fe]/20">
-            <Target className="text-[#0f62fe]" size={24} />
-          </div>
-          <span className={`${poppins.className} text-2xl font-semibold tracking-tight text-white`}>
-            Dashify
-          </span>
+        <div className="mb-8 flex items-center justify-center">
+          <img src="/logo.png" alt="Dashify Logo" className="h-12 w-auto object-contain" />
         </div>
 
         {/* Card Container com Efeito de Glow */}
