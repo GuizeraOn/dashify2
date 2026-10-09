@@ -227,6 +227,7 @@ export async function POST() {
         const { count, error: purgeError } = await getSupabaseAdmin()
           .from('meta_ads_insights')
           .delete({ count: 'exact' })
+          .eq('account_id', account)
           .gte('date', since)
           .lte('date', until)
           .or(`updated_at.is.null,updated_at.lt.${runStamp}`);
